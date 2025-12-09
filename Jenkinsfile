@@ -18,7 +18,7 @@ pipeline {
       steps {
         script {
           withCredentials([
-            usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+            usernamePassword(credentialsId: 'docker_hub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
             file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')
           ]) {
             dir('services/auth-service') {
@@ -42,7 +42,7 @@ pipeline {
       when { changeset "services/patient-service/**" }
       steps {
         script {
-          withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+          withCredentials([usernamePassword(credentialsId: 'docker_hub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
                            file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
             dir('services/patient-service') {
               sh "echo \"$DOCKER_PASS\" | docker login -u \"$DOCKER_USER\" --password-stdin"
@@ -63,7 +63,7 @@ pipeline {
       when { changeset "services/scans-service/**" }
       steps {
         script {
-          withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+          withCredentials([usernamePassword(credentialsId: 'docker_hub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
                            file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
             dir('services/scans-service') {
               sh "echo \"$DOCKER_PASS\" | docker login -u \"$DOCKER_USER\" --password-stdin"
@@ -84,7 +84,7 @@ pipeline {
       when { changeset "services/appointment-service/**" }
       steps {
         script {
-          withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+          withCredentials([usernamePassword(credentialsId: 'docker_hub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
                            file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
             dir('services/appointment-service') {
               sh "echo \"$DOCKER_PASS\" | docker login -u \"$DOCKER_USER\" --password-stdin"
@@ -105,7 +105,7 @@ pipeline {
       when { changeset "services/billing-service/**" }
       steps {
         script {
-          withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+          withCredentials([usernamePassword(credentialsId: 'docker_hub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
                            file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
             dir('services/billing-service') {
               sh "echo \"$DOCKER_PASS\" | docker login -u \"$DOCKER_USER\" --password-stdin"
@@ -126,7 +126,7 @@ pipeline {
       when { changeset "services/prescription-service/**" }
       steps {
         script {
-          withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+          withCredentials([usernamePassword(credentialsId: 'docker_hub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
                            file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
             dir('services/prescription-service') {
               sh "echo \"$DOCKER_PASS\" | docker login -u \"$DOCKER_USER\" --password-stdin"
@@ -147,7 +147,7 @@ pipeline {
       when { changeset "frontend/**" }
       steps {
         script {
-          withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+          withCredentials([usernamePassword(credentialsId: 'docker_hub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
                            file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
             dir('frontend') {
               sh "echo \"$DOCKER_PASS\" | docker login -u \"$DOCKER_USER\" --password-stdin"
