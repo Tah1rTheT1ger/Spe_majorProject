@@ -9,7 +9,7 @@ pipeline {
 
     // --- NEW DEVOPS/SECURITY VARS ---
     IMAGE_TAG       = 'latest'                    // Placeholder, will be set in 'Determine Tag' stage
-    SONAR_HOST_URL  = 'http://172.16.137.16:9000' // CHANGE THIS to your SonarQube URL
+    SONAR_HOST_URL  = 'http://localhost:9000' // CHANGE THIS to your SonarQube URL
     SONAR_TOKEN_ID  = 'sonar-token'               // CHANGE THIS to your SonarQube token ID in Jenkins
   }
 
