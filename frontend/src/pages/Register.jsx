@@ -27,7 +27,7 @@ export default function Register() {
     <div style={{ maxWidth: 520, margin: '20px auto', padding: 16, border: '1px solid #ddd', borderRadius: 8 }}>
       <h2>Register</h2>
       <form onSubmit={submit} style={{ display: 'grid', gap: 8 }}>
-        <input placeholder="Full Name of Person" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
+        <input placeholder="Full Name of People" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
         <input placeholder="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
         <input placeholder="Password" type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required />
         <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
