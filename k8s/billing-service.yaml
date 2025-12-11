@@ -20,8 +20,8 @@ spec:
     spec:
       containers:
       - name: billing-service
-        image: billing-service:latest
-        imagePullPolicy: Never
+        image: "docker.io/tah1rthet1ger/billing-service:latest"
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 4400
         env:

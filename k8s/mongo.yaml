@@ -29,9 +29,13 @@ spec:
       labels:
         app: mongo
     spec:
+      # CRITICAL FIX: Reference the ImagePullSecret for the private Docker Hub image
+      imagePullSecrets:
+      - name: regcred 
+      
       containers:
       - name: mongo
-        image: mongo:6
+        image: "docker.io/tah1rthet1ger/mongo:6"
         ports:
         - containerPort: 27017
         volumeMounts:

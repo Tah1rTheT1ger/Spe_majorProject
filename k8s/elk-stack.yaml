@@ -38,12 +38,12 @@ spec:
           privileged: true
       containers:
       - name: elasticsearch
-        image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+        image: docker.elastic.co/elasticsearch/elasticsearch:7.10.2
         env:
         - name: discovery.type
           value: single-node
-        - name: ES_JAVA_OPTS
-          value: "-Xms512m -Xmx512m"
+        - name: JAVA_TOOL_OPTIONS
+          value: "-XX:-UseContainerSupport"
         ports:
         - containerPort: 9200
         - containerPort: 9300
@@ -54,8 +54,10 @@ spec:
           httpGet:
             path: /
             port: 9200
-          initialDelaySeconds: 15
-          periodSeconds: 10
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+          periodSeconds: 20
+          failureThreshold: 10
         resources:
           requests:
             cpu: "500m"
@@ -174,7 +176,7 @@ spec:
     spec:
       containers:
       - name: kibana
-        image: docker.elastic.co/kibana/kibana:7.17.0
+        image: docker.elastic.co/kibana/kibana:7.10.2
         env:
         - name: ELASTICSEARCH_HOSTS
           value: "http://elasticsearch:9200"
@@ -184,8 +186,10 @@ spec:
           httpGet:
             path: /
             port: 5601
-          initialDelaySeconds: 15
-          periodSeconds: 10
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+          periodSeconds: 20
+          failureThreshold: 10
         resources:
           requests:
             cpu: "200m"

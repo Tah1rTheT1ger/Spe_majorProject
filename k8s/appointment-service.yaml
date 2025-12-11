@@ -16,8 +16,8 @@ spec:
     spec:
       containers:
       - name: appointment-service
-        image: appointment-service:latest
-        imagePullPolicy: Never
+        image: "docker.io/tah1rthet1ger/appointment-service:latest"
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 4300
         env:
