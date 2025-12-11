@@ -1,6 +1,8 @@
 /**
  * Jenkinsfile for CI/CD Pipeline
  * Targets Microservices (Auth, Patient, etc.) and Frontend Deployment to Minikube (or any K8s cluster).
+ * * ✅ FIX APPLIED: Replaced the illegal global function definition with repeated, inline logic
+ * to comply with Declarative Pipeline syntax and resolve the "Expected a stage" error.
  */
 pipeline {
   agent any
@@ -9,7 +11,7 @@ pipeline {
     // ------------------------------------------------------------------------------------------------------
     // ⚠️ CRITICAL STEP: CONFIGURE CREDENTIAL IDs
     // ------------------------------------------------------------------------------------------------------
-    DOCKER_CRED_ID  = 'dockerhub-creds'              // Jenkins ID for Docker Hub Username/Password (YOUR credentials)
+    DOCKER_CRED_ID  = 'dockerhub-creds'         // Jenkins ID for Docker Hub Username/Password (YOUR credentials)
     KUBECONFIG_ID   = 'kubeconfig-minikube'     // Jenkins ID for the Kubeconfig Secret File
     
     // --- Security & Quality ---
@@ -55,100 +57,289 @@ pipeline {
     }
 
     // ---------------------------------------------------------
-    // Reusable Function for Build, Scan, and Deploy
-    // DRY (Don't Repeat Yourself) principle applied to all services.
+    // Service: Auth - Repeated Logic (Correct Declarative Syntax)
     // ---------------------------------------------------------
-    def build_scan_deploy = { SERVICE_NAME, DIR_NAME ->
-      withCredentials([
-        usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
-        file(credentialsId: env.KUBECONFIG_ID, variable: 'KUBECONFIG_FILE')
-      ]) {
-        // --- 1. BUILD & PUSH ---
-        dir("${DIR_NAME}") {
-          // Set DOCKER_HOST explicitly for the current shell environment before running docker commands
-          sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
-
-          sh 'echo "Logging into Docker Hub..."'
-          sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-
-          // Use DOCKER_USER as the registry for tagging (e.g., tahir/auth-service:abc1234)
-          sh "docker build -t ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} ."
-          sh "docker push ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
-        }
-
-        // --- 2. IMAGE SCAN (Trivy) ---
-        sh """
-          echo "Scanning ${SERVICE_NAME} image with Trivy..."
-          # Set exit-code 0 to allow pipeline to continue even if vulnerabilities are found
-          trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} || true
-        """
-
-        // --- 3. DEPLOYMENT (Kubernetes Rolling Update) ---
-        sh """
-          export KUBECONFIG=${KUBECONFIG_FILE}
-          echo "Triggering rollout for deployment/${SERVICE_NAME}..."
-
-          # Update the deployment image to the new tag, forcing a rollout
-          # We use DOCKER_USER as the image path, matching the tag/push
-          kubectl set image deployment/${SERVICE_NAME} ${SERVICE_NAME}=${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} --record || true
-          
-          # Wait for the rollout to complete before proceeding (180s timeout)
-          kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true
-        """
-      }
-    }
-
-    // ---------------------------------------------------------
-    // Individual Service Stages
-    // The 'when { changeset "..." }' logic ensures only changed services are built.
-    // ---------------------------------------------------------
-
-    stage('Build & Deploy: Auth Service') {
+    stage('Build & Image Scan & Deploy: Auth Service') {
       when { changeset "services/auth-service/**" }
       steps {
-        script { build_scan_deploy('auth-service', 'services/auth-service') }
+        script {
+          def SERVICE_NAME = 'auth-service'
+          def DIR_NAME = 'services/auth-service'
+
+          withCredentials([
+            usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+            file(credentialsId: env.KUBECONFIG_ID, variable: 'KUBECONFIG_FILE')
+          ]) {
+            // --- 1. BUILD & PUSH ---
+            dir("${DIR_NAME}") {
+              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh 'echo "Logging into Docker Hub..."'
+              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+              sh "docker build -t ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} ."
+              sh "docker push ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+            }
+
+            // --- 2. IMAGE SCAN (Trivy) ---
+            sh """
+              echo "Scanning ${SERVICE_NAME} image with Trivy..."
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} || true
+            """
+
+            // --- 3. DEPLOYMENT (Kubernetes Rolling Update) ---
+            sh """
+              export KUBECONFIG=${KUBECONFIG_FILE}
+              echo "Triggering rollout for deployment/${SERVICE_NAME}..."
+              kubectl set image deployment/${SERVICE_NAME} ${SERVICE_NAME}=${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} --record || true
+              kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true
+            """
+          }
+        }
       }
     }
-
-    stage('Build & Deploy: Patient Service') {
+    
+    // ---------------------------------------------------------
+    // Service: Patient - Repeated Logic (Correct Declarative Syntax)
+    // ---------------------------------------------------------
+    stage('Build & Image Scan & Deploy: Patient Service') {
       when { changeset "services/patient-service/**" }
       steps {
-        script { build_scan_deploy('patient-service', 'services/patient-service') }
+        script {
+          def SERVICE_NAME = 'patient-service'
+          def DIR_NAME = 'services/patient-service'
+          
+          withCredentials([
+            usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+            file(credentialsId: env.KUBECONFIG_ID, variable: 'KUBECONFIG_FILE')
+          ]) {
+            // --- 1. BUILD & PUSH ---
+            dir("${DIR_NAME}") {
+              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh 'echo "Logging into Docker Hub..."'
+              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+              sh "docker build -t ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} ."
+              sh "docker push ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+            }
+
+            // --- 2. IMAGE SCAN (Trivy) ---
+            sh """
+              echo "Scanning ${SERVICE_NAME} image with Trivy..."
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} || true
+            """
+
+            // --- 3. DEPLOYMENT (Kubernetes Rolling Update) ---
+            sh """
+              export KUBECONFIG=${KUBECONFIG_FILE}
+              echo "Triggering rollout for deployment/${SERVICE_NAME}..."
+              kubectl set image deployment/${SERVICE_NAME} ${SERVICE_NAME}=${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} --record || true
+              kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true
+            """
+          }
+        }
       }
     }
 
-    stage('Build & Deploy: Scans Service') {
+    // ---------------------------------------------------------
+    // Service: Scans - Repeated Logic (Correct Declarative Syntax)
+    // ---------------------------------------------------------
+    stage('Build & Image Scan & Deploy: Scans Service') {
       when { changeset "services/scans-service/**" }
       steps {
-        script { build_scan_deploy('scans-service', 'services/scans-service') }
+        script {
+          def SERVICE_NAME = 'scans-service'
+          def DIR_NAME = 'services/scans-service'
+          
+          withCredentials([
+            usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+            file(credentialsId: env.KUBECONFIG_ID, variable: 'KUBECONFIG_FILE')
+          ]) {
+            // --- 1. BUILD & PUSH ---
+            dir("${DIR_NAME}") {
+              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh 'echo "Logging into Docker Hub..."'
+              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+              sh "docker build -t ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} ."
+              sh "docker push ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+            }
+
+            // --- 2. IMAGE SCAN (Trivy) ---
+            sh """
+              echo "Scanning ${SERVICE_NAME} image with Trivy..."
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} || true
+            """
+
+            // --- 3. DEPLOYMENT (Kubernetes Rolling Update) ---
+            sh """
+              export KUBECONFIG=${KUBECONFIG_FILE}
+              echo "Triggering rollout for deployment/${SERVICE_NAME}..."
+              kubectl set image deployment/${SERVICE_NAME} ${SERVICE_NAME}=${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} --record || true
+              kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true
+            """
+          }
+        }
       }
     }
 
-    stage('Build & Deploy: Appointment Service') {
+    // ---------------------------------------------------------
+    // Service: Appointment - Repeated Logic (Correct Declarative Syntax)
+    // ---------------------------------------------------------
+    stage('Build & Image Scan & Deploy: Appointment Service') {
       when { changeset "services/appointment-service/**" }
       steps {
-        script { build_scan_deploy('appointment-service', 'services/appointment-service') }
+        script {
+          def SERVICE_NAME = 'appointment-service'
+          def DIR_NAME = 'services/appointment-service'
+          
+          withCredentials([
+            usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+            file(credentialsId: env.KUBECONFIG_ID, variable: 'KUBECONFIG_FILE')
+          ]) {
+            // --- 1. BUILD & PUSH ---
+            dir("${DIR_NAME}") {
+              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh 'echo "Logging into Docker Hub..."'
+              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+              sh "docker build -t ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} ."
+              sh "docker push ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+            }
+
+            // --- 2. IMAGE SCAN (Trivy) ---
+            sh """
+              echo "Scanning ${SERVICE_NAME} image with Trivy..."
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} || true
+            """
+
+            // --- 3. DEPLOYMENT (Kubernetes Rolling Update) ---
+            sh """
+              export KUBECONFIG=${KUBECONFIG_FILE}
+              echo "Triggering rollout for deployment/${SERVICE_NAME}..."
+              kubectl set image deployment/${SERVICE_NAME} ${SERVICE_NAME}=${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} --record || true
+              kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true
+            """
+          }
+        }
       }
     }
-
-    stage('Build & Deploy: Billing Service') {
+    
+    // ---------------------------------------------------------
+    // Service: Billing - Repeated Logic (Correct Declarative Syntax)
+    // ---------------------------------------------------------
+    stage('Build & Image Scan & Deploy: Billing Service') {
       when { changeset "services/billing-service/**" }
       steps {
-        script { build_scan_deploy('billing-service', 'services/billing-service') }
+        script {
+          def SERVICE_NAME = 'billing-service'
+          def DIR_NAME = 'services/billing-service'
+          
+          withCredentials([
+            usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+            file(credentialsId: env.KUBECONFIG_ID, variable: 'KUBECONFIG_FILE')
+          ]) {
+            // --- 1. BUILD & PUSH ---
+            dir("${DIR_NAME}") {
+              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh 'echo "Logging into Docker Hub..."'
+              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+              sh "docker build -t ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} ."
+              sh "docker push ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+            }
+
+            // --- 2. IMAGE SCAN (Trivy) ---
+            sh """
+              echo "Scanning ${SERVICE_NAME} image with Trivy..."
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} || true
+            """
+
+            // --- 3. DEPLOYMENT (Kubernetes Rolling Update) ---
+            sh """
+              export KUBECONFIG=${KUBECONFIG_FILE}
+              echo "Triggering rollout for deployment/${SERVICE_NAME}..."
+              kubectl set image deployment/${SERVICE_NAME} ${SERVICE_NAME}=${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} --record || true
+              kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true
+            """
+          }
+        }
       }
     }
-
-    stage('Build & Deploy: Prescription Service') {
+    
+    // ---------------------------------------------------------
+    // Service: Prescription - Repeated Logic (Correct Declarative Syntax)
+    // ---------------------------------------------------------
+    stage('Build & Image Scan & Deploy: Prescription Service') {
       when { changeset "services/prescription-service/**" }
       steps {
-        script { build_scan_deploy('prescription-service', 'services/prescription-service') }
+        script {
+          def SERVICE_NAME = 'prescription-service'
+          def DIR_NAME = 'services/prescription-service'
+          
+          withCredentials([
+            usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+            file(credentialsId: env.KUBECONFIG_ID, variable: 'KUBECONFIG_FILE')
+          ]) {
+            // --- 1. BUILD & PUSH ---
+            dir("${DIR_NAME}") {
+              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh 'echo "Logging into Docker Hub..."'
+              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+              sh "docker build -t ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} ."
+              sh "docker push ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+            }
+
+            // --- 2. IMAGE SCAN (Trivy) ---
+            sh """
+              echo "Scanning ${SERVICE_NAME} image with Trivy..."
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} || true
+            """
+
+            // --- 3. DEPLOYMENT (Kubernetes Rolling Update) ---
+            sh """
+              export KUBECONFIG=${KUBECONFIG_FILE}
+              echo "Triggering rollout for deployment/${SERVICE_NAME}..."
+              kubectl set image deployment/${SERVICE_NAME} ${SERVICE_NAME}=${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} --record || true
+              kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true
+            """
+          }
+        }
       }
     }
 
-    stage('Build & Deploy: Frontend') {
+    // ---------------------------------------------------------
+    // Frontend - Repeated Logic (Correct Declarative Syntax)
+    // ---------------------------------------------------------
+    stage('Build & Image Scan & Deploy: Frontend') {
       when { changeset "frontend/**" }
       steps {
-        script { build_scan_deploy('frontend', 'frontend') }
+        script {
+          def SERVICE_NAME = 'frontend'
+          def DIR_NAME = 'frontend'
+
+          withCredentials([
+            usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+            file(credentialsId: env.KUBECONFIG_ID, variable: 'KUBECONFIG_FILE')
+          ]) {
+            // --- 1. BUILD & PUSH ---
+            dir("${DIR_NAME}") {
+              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh 'echo "Logging into Docker Hub..."'
+              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+              sh "docker build -t ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} ."
+              sh "docker push ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+            }
+
+            // --- 2. IMAGE SCAN (Trivy) ---
+            sh """
+              echo "Scanning ${SERVICE_NAME} image with Trivy..."
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} || true
+            """
+
+            // --- 3. DEPLOYMENT (Kubernetes Rolling Update) ---
+            sh """
+              export KUBECONFIG=${KUBECONFIG_FILE}
+              echo "Triggering rollout for deployment/${SERVICE_NAME}..."
+              kubectl set image deployment/${SERVICE_NAME} ${SERVICE_NAME}=${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} --record || true
+              kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true
+            """
+          }
+        }
       }
     }
 
