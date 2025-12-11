@@ -327,6 +327,13 @@ pipeline {
             file(credentialsId: env.KUBECONFIG_ID, variable: 'KUBECONFIG_FILE')
           ]) {
             dir("${SERVICE_NAME}") {
+              // --- START DEBUG LINES ---
+              sh 'echo "--- DEBUG START ---"'
+              sh 'whoami' // DEBUG: Identify the user running the script
+              sh 'groups' // DEBUG: List all groups the user belongs to
+              sh 'echo "--- DEBUG END ---"'
+              // --- END DEBUG LINES ---
+              
               sh 'echo "Logging into Docker Hub..."'
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
               sh "docker build -t ${DOCKER_REGISTRY}/${SERVICE_NAME}:${IMAGE_TAG} ."

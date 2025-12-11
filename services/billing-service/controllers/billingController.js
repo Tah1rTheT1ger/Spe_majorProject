@@ -58,7 +58,7 @@ exports.listBills = async (req, res) => {
     res.json(list);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error bu can be modified' });
   }
 };
 

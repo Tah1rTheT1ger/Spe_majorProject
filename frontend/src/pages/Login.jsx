@@ -32,7 +32,7 @@ export default function Login() {
       <form onSubmit={handle} style={{ display: 'grid', gap: 8 }}>
         <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         <input placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-        <button type="submit" style={{ padding: '8px 12px' }}>Login as you role</button>
+        <button type="submit" style={{ padding: '8px 12px' }}>Login as your role</button>
         {err && <div style={{ color: 'red' }}>{err}</div>}
       </form>
     </div>
