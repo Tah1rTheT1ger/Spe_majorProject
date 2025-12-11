@@ -20,8 +20,8 @@ spec:
     spec:
       containers:
       - name: scans-service
-        image: scans-service:latest
-        imagePullPolicy: Never
+        image: "docker.io/tah1rthet1ger/scans-service:latest"
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 4200
         env:
