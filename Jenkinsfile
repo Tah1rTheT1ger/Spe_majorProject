@@ -311,6 +311,9 @@ pipeline {
         script {
           def SERVICE_NAME = 'frontend'
           def DIR_NAME = 'frontend'
+          
+          // CRITICAL: Ensure IMAGE_TAG is dynamic, otherwise the deployment won't update
+          def FINAL_IMAGE_TAG = env.IMAGE_TAG ?: 'latest'
 
           withCredentials([
             usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
@@ -321,21 +324,30 @@ pipeline {
               sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
               sh 'echo "Logging into Docker Hub..."'
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-              sh "docker build -t ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} ."
-              sh "docker push ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+              
+              // Use the unique tag for the build
+              sh "docker build -t ${DOCKER_USER}/${SERVICE_NAME}:${FINAL_IMAGE_TAG} ."
+              sh "docker push ${DOCKER_USER}/${SERVICE_NAME}:${FINAL_IMAGE_TAG}"
             }
 
             // --- 2. IMAGE SCAN (Trivy) ---
             sh """
-              echo "Scanning ${SERVICE_NAME} image with Trivy..."
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} || true
+              if command -v trivy >/dev/null 2>&1; then
+                echo "Scanning ${SERVICE_NAME} image with Trivy..."
+                trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${DOCKER_USER}/${SERVICE_NAME}:${FINAL_IMAGE_TAG} || true
+              else
+                echo "Warning: Trivy not found. Skipping image scan."
+              fi
             """
 
             // --- 3. DEPLOYMENT (Kubernetes Rolling Update) ---
             sh """
               export KUBECONFIG=${KUBECONFIG_FILE}
-              echo "Triggering rollout for deployment/${SERVICE_NAME}..."
-              kubectl set image deployment/${SERVICE_NAME} ${SERVICE_NAME}=${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG} --record || true
+              echo "Triggering rollout for deployment/${SERVICE_NAME} with tag ${FINAL_IMAGE_TAG}..."
+              
+              // MANDATORY FIX: Use the unique tag to force Kubernetes to pull the new image
+              kubectl set image deployment/${SERVICE_NAME} ${SERVICE_NAME}=${DOCKER_USER}/${SERVICE_NAME}:${FINAL_IMAGE_TAG} --record || true
+              
               kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true
             """
           }
