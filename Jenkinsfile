@@ -1,8 +1,8 @@
 /**
  * Jenkinsfile — FINAL VERSION (NO FUNCTIONS)
  * Expanded fully for all microservices + frontend.
+ * NOTE: Assumes Kubeconfig is manually copied to the Jenkins user's home path (~/.kube/config)
  */
-
 pipeline {
   agent any
 
@@ -11,7 +11,8 @@ pipeline {
     SONAR_HOST_URL  = 'http://localhost:9000'
     SONAR_TOKEN_ID  = 'sonar-token'
 
-    IMAGE_TAG       = 'latest'
+    // This is set to the determined SHA/Build Number in the 'Determine Tag' stage
+    IMAGE_TAG       = 'latest' 
     DOCKER_HOST_FIX = 'unix:///var/run/docker.sock'
 
     K8S_IMAGE_PLACEHOLDER = 'PLACEHOLDER'
@@ -39,8 +40,10 @@ pipeline {
           try {
             sha = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
           } catch (err) {
+            echo "git rev-parse failed, falling back to Jenkins Build Number"
             sha = env.BUILD_NUMBER
           }
+          // Set the global environment variable IMAGE_TAG
           env.IMAGE_TAG = sha
           echo "Using final image tag: ${env.IMAGE_TAG}"
         }
@@ -55,11 +58,10 @@ pipeline {
       when { changeset "services/auth-service/**" }
       steps {
         script {
-          def FINAL_IMAGE_TAG = env.IMAGE_TAG
           def SERVICE_NAME = "auth-service"
           def DIR_NAME = "services/auth-service"
-          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${SERVICE_NAME}:${FINAL_IMAGE_TAG}"
           def MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/auth-service.yaml"
+          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${SERVICE_NAME}:${env.IMAGE_TAG}"
 
           withCredentials([
             usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
@@ -78,12 +80,13 @@ pipeline {
               if command -v trivy >/dev/null 2>&1; then
                 trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
               else
-                echo "Skipping Trivy scan (not installed)."
+                echo "Warning: Trivy not found. Skipping image scan."
               fi
             """
 
             // Deploy
-            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${FINAL_IMAGE_TAG}|g' ${MANIFEST_FILE}"
+            // Ensure the manifest path is correct and the placeholder is replaced
+            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${MANIFEST_FILE}"
             sh "kubectl apply -f ${MANIFEST_FILE}"
             sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
             sh "kubectl rollout restart deployment ${SERVICE_NAME}"
@@ -100,11 +103,11 @@ pipeline {
       when { changeset "services/patient-service/**" }
       steps {
         script {
-          def FINAL_IMAGE_TAG = env.IMAGE_TAG
           def SERVICE_NAME = "patient-service"
           def DIR_NAME = "services/patient-service"
-          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${SERVICE_NAME}:${FINAL_IMAGE_TAG}"
           def MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/patient-service.yaml"
+          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${SERVICE_NAME}:${env.IMAGE_TAG}"
+
 
           withCredentials([
             usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
@@ -121,10 +124,12 @@ pipeline {
             sh """
               if command -v trivy >/dev/null 2>&1; then
                 trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+              else
+                echo "Warning: Trivy not found. Skipping image scan."
               fi
             """
 
-            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${FINAL_IMAGE_TAG}|g' ${MANIFEST_FILE}"
+            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${MANIFEST_FILE}"
             sh "kubectl apply -f ${MANIFEST_FILE}"
             sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
             sh "kubectl rollout restart deployment ${SERVICE_NAME}"
@@ -141,11 +146,11 @@ pipeline {
       when { changeset "services/scans-service/**" }
       steps {
         script {
-          def FINAL_IMAGE_TAG = env.IMAGE_TAG
           def SERVICE_NAME = "scans-service"
           def DIR_NAME = "services/scans-service"
-          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${SERVICE_NAME}:${FINAL_IMAGE_TAG}"
           def MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/scans-service.yaml"
+          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${SERVICE_NAME}:${env.IMAGE_TAG}"
+
 
           withCredentials([
             usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
@@ -162,10 +167,12 @@ pipeline {
             sh """
               if command -v trivy >/dev/null 2>&1; then
                 trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+              else
+                echo "Warning: Trivy not found. Skipping image scan."
               fi
             """
 
-            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${FINAL_IMAGE_TAG}|g' ${MANIFEST_FILE}"
+            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${MANIFEST_FILE}"
             sh "kubectl apply -f ${MANIFEST_FILE}"
             sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
             sh "kubectl rollout restart deployment ${SERVICE_NAME}"
@@ -182,11 +189,10 @@ pipeline {
       when { changeset "services/appointment-service/**" }
       steps {
         script {
-          def FINAL_IMAGE_TAG = env.IMAGE_TAG
           def SERVICE_NAME = "appointment-service"
           def DIR_NAME = "services/appointment-service"
-          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${SERVICE_NAME}:${FINAL_IMAGE_TAG}"
           def MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/appointment-service.yaml"
+          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${SERVICE_NAME}:${env.IMAGE_TAG}"
 
           withCredentials([
             usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
@@ -203,10 +209,12 @@ pipeline {
             sh """
               if command -v trivy >/dev/null 2>&1; then
                 trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+              else
+                echo "Warning: Trivy not found. Skipping image scan."
               fi
             """
 
-            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${FINAL_IMAGE_TAG}|g' ${MANIFEST_FILE}"
+            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${MANIFEST_FILE}"
             sh "kubectl apply -f ${MANIFEST_FILE}"
             sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
             sh "kubectl rollout restart deployment ${SERVICE_NAME}"
@@ -223,11 +231,11 @@ pipeline {
       when { changeset "services/billing-service/**" }
       steps {
         script {
-          def FINAL_IMAGE_TAG = env.IMAGE_TAG
           def SERVICE_NAME = "billing-service"
           def DIR_NAME = "services/billing-service"
-          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${SERVICE_NAME}:${FINAL_IMAGE_TAG}"
           def MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/billing-service.yaml"
+          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${SERVICE_NAME}:${env.IMAGE_TAG}"
+
 
           withCredentials([
             usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
@@ -244,10 +252,12 @@ pipeline {
             sh """
               if command -v trivy >/dev/null 2>&1; then
                 trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+              else
+                echo "Warning: Trivy not found. Skipping image scan."
               fi
             """
 
-            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${FINAL_IMAGE_TAG}|g' ${MANIFEST_FILE}"
+            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${MANIFEST_FILE}"
             sh "kubectl apply -f ${MANIFEST_FILE}"
             sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
             sh "kubectl rollout restart deployment ${SERVICE_NAME}"
@@ -264,11 +274,11 @@ pipeline {
       when { changeset "services/prescription-service/**" }
       steps {
         script {
-          def FINAL_IMAGE_TAG = env.IMAGE_TAG
           def SERVICE_NAME = "prescription-service"
           def DIR_NAME = "services/prescription-service"
-          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${SERVICE_NAME}:${FINAL_IMAGE_TAG}"
           def MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/prescription-service.yaml"
+          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${SERVICE_NAME}:${env.IMAGE_TAG}"
+
 
           withCredentials([
             usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
@@ -285,10 +295,12 @@ pipeline {
             sh """
               if command -v trivy >/dev/null 2>&1; then
                 trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+              else
+                echo "Warning: Trivy not found. Skipping image scan."
               fi
             """
 
-            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${FINAL_IMAGE_TAG}|g' ${MANIFEST_FILE}"
+            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${MANIFEST_FILE}"
             sh "kubectl apply -f ${MANIFEST_FILE}"
             sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
             sh "kubectl rollout restart deployment ${SERVICE_NAME}"
@@ -305,11 +317,10 @@ pipeline {
       when { changeset "frontend/**" }
       steps {
         script {
-          def FINAL_IMAGE_TAG = env.IMAGE_TAG
           def SERVICE_NAME = "frontend"
           def DIR_NAME = "frontend"
-          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${SERVICE_NAME}:${FINAL_IMAGE_TAG}"
-          def MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/frontend.yaml"
+          def MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/frontend.yaml" // NOTE: Using frontend.yaml
+          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${SERVICE_NAME}:${env.IMAGE_TAG}"
 
           withCredentials([
             usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
@@ -326,10 +337,12 @@ pipeline {
             sh """
               if command -v trivy >/dev/null 2>&1; then
                 trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+              else
+                echo "Warning: Trivy not found. Skipping image scan."
               fi
             """
 
-            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${FINAL_IMAGE_TAG}|g' ${MANIFEST_FILE}"
+            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${MANIFEST_FILE}"
             sh "kubectl apply -f ${MANIFEST_FILE}"
             sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
             sh "kubectl rollout restart deployment ${SERVICE_NAME}"
