@@ -20,8 +20,8 @@ spec:
     spec:
       containers:
       - name: billing-service
-        image: adarshareddy69/billing-service:latest
-        imagePullPolicy: IfNotPresent
+        image: billing-service:latest
+        imagePullPolicy: Never
         ports:
         - containerPort: 4400
         env:

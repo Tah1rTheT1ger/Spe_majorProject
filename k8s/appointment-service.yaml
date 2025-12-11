@@ -16,8 +16,8 @@ spec:
     spec:
       containers:
       - name: appointment-service
-        image: adarshareddy69/appointment-service:latest
-        imagePullPolicy: IfNotPresent
+        image: appointment-service:latest
+        imagePullPolicy: Never
         ports:
         - containerPort: 4300
         env:

@@ -20,8 +20,8 @@ spec:
     spec:
       containers:
       - name: prescription-service
-        image: adarshareddy69/prescription-service:latest
-        imagePullPolicy: IfNotPresent
+        image: prescription-service:latest
+        imagePullPolicy: Never
         ports:
         - containerPort: 4500
         env:

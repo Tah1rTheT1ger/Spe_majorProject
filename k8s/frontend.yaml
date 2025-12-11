@@ -16,8 +16,8 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: adarshareddy69/frontend:latest
-        imagePullPolicy: IfNotPresent
+        image: frontend:latest
+        imagePullPolicy: Never
         ports:
         - containerPort: 80          # nginx serves on 80
         resources:

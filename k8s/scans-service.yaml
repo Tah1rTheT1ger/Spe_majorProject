@@ -20,8 +20,8 @@ spec:
     spec:
       containers:
       - name: scans-service
-        image: adarshareddy69/scans-service:latest
-        imagePullPolicy: IfNotPresent
+        image: scans-service:latest
+        imagePullPolicy: Never
         ports:
         - containerPort: 4200
         env:

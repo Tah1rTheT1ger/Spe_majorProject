@@ -20,8 +20,8 @@ spec:
     spec:
       containers:
       - name: patient-service
-        image: adarshareddy69/patient-service:latest
-        imagePullPolicy: IfNotPresent
+        image: patient-service:latest
+        imagePullPolicy: Never
         ports:
         - containerPort: 4100
         env:
