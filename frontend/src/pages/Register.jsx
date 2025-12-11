@@ -33,7 +33,7 @@ export default function Register() {
         <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
           <option value="patient">Patient</option>
           <option value="doctor">Doctor</option>
-          <option value="desk">Desk beanch this time one change okay last time i am thinking this one  </option>
+          <option value="desk">Desk beanch this time one change okay last for now we will try </option>
         </select>
         <button type="submit">Register</button>
         <p style={{ marginTop: 10 }}>

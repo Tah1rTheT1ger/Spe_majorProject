@@ -344,10 +344,10 @@ pipeline {
             sh """
               export KUBECONFIG=${KUBECONFIG_FILE}
               echo "Triggering rollout for deployment/${SERVICE_NAME} with tag ${FINAL_IMAGE_TAG}..."
-              
-              // MANDATORY FIX: Use the unique tag to force Kubernetes to pull the new image
+  
+              # MANDATORY FIX: Use the unique tag to force Kubernetes to pull the new image
               kubectl set image deployment/${SERVICE_NAME} ${SERVICE_NAME}=${DOCKER_USER}/${SERVICE_NAME}:${FINAL_IMAGE_TAG} --record || true
-              
+  
               kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true
             """
           }
