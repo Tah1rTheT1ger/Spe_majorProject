@@ -17,7 +17,7 @@ spec:
       containers:
       - name: frontend
         image: "docker.io/tah1rthet1ger/frontend:latest"
-        imagePullPolicy: Never
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80          # nginx serves on 80
         resources:
