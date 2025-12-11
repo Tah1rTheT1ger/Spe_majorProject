@@ -32,7 +32,7 @@ spec:
     spec:
       containers:
       - name: auth-service
-        image: "docker.io/tah1rthet1gerauth-service:latest"
+        image: "docker.io/tah1rthet1ger/auth-service:latest"
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 4000
