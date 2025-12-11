@@ -1,9 +1,10 @@
 /**
  * Jenkinsfile — FINAL VERSION (NO FUNCTIONS, FULL REPETITION)
- * FIXES APPLIED:
- * 1. DOCKER_USER scope is fixed by defining FULL_IMAGE_NAME inside withCredentials.
- * 2. Minikube image cache is forcibly deleted using docker rmi -f before building/pushing.
- * 3. Deployment uses kubectl apply and rollout restart for robust updates.
+ * This structure is optimized for success in a Minikube environment:
+ * 1. FIX: DOCKER_USER scope is fixed by defining FULL_IMAGE_NAME inside withCredentials.
+ * 2. FIX: Minikube image cache is forcibly deleted (docker rmi -f) before building/pushing.
+ * 3. FIX: Deployment uses kubectl apply and rollout restart for robust creation/updates.
+ * * NOTE: Assumes Kubeconfig is manually copied to /var/lib/jenkins/.kube/config on the Jenkins host.
  */
 pipeline {
   agent any
@@ -45,10 +46,10 @@ pipeline {
           } catch (err) {
             echo "git rev-parse failed, falling back to Jenkins Build Number"
             // Fallback: BUILD_NUMBER is an implicit environment variable
-            sha = BUILD_NUMBER
+            sha = env.BUILD_NUMBER
           }
           // Set the global environment variable IMAGE_TAG
-          IMAGE_TAG = sha
+          env.IMAGE_TAG = sha
           echo "Using final image tag: ${IMAGE_TAG}"
         }
       }
