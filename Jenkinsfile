@@ -1,8 +1,9 @@
 /**
- * Jenkinsfile — FINAL VERSION (NO FUNCTIONS)
- * Expanded fully for all microservices + frontend.
- * FIX APPLIED: Moved FULL_IMAGE_NAME definition inside withCredentials block to fix "null/frontend" error.
- * NOTE: Assumes Kubeconfig is manually copied to the Jenkins user's home path (~/.kube/config)
+ * Jenkinsfile — FINAL VERSION (NO FUNCTIONS, FULL REPETITION)
+ * FIXES APPLIED:
+ * 1. DOCKER_USER scope is fixed by defining FULL_IMAGE_NAME inside withCredentials.
+ * 2. Minikube image cache is forcibly deleted using docker rmi -f before building/pushing.
+ * 3. Deployment uses kubectl apply and rollout restart for robust updates.
  */
 pipeline {
   agent any
@@ -44,11 +45,11 @@ pipeline {
           } catch (err) {
             echo "git rev-parse failed, falling back to Jenkins Build Number"
             // Fallback: BUILD_NUMBER is an implicit environment variable
-            sha = env.BUILD_NUMBER
+            sha = BUILD_NUMBER
           }
           // Set the global environment variable IMAGE_TAG
-          env.IMAGE_TAG = sha
-          echo "Using final image tag: ${env.IMAGE_TAG}"
+          IMAGE_TAG = sha
+          echo "Using final image tag: ${IMAGE_TAG}"
         }
       }
     }
@@ -63,17 +64,24 @@ pipeline {
         script {
           def SERVICE_NAME = "auth-service"
           def DIR_NAME = "services/auth-service"
-          def MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/auth-service.yaml"
+          def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/auth-service.yaml"
 
           withCredentials([
-            usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+            usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
           ]) {
             // FIX: Define FULL_IMAGE_NAME here where DOCKER_USER is available
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${env.IMAGE_TAG}"
+            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+
+              // FIX: Force delete the image before building to bust Minikube's local cache
+              sh """
+                echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+                eval \$(minikube docker-env)
+                docker rmi -f ${FULL_IMAGE_NAME} || true
+              """
 
               sh "docker build -t ${FULL_IMAGE_NAME} ."
               sh "docker push ${FULL_IMAGE_NAME}"
@@ -89,7 +97,7 @@ pipeline {
             """
 
             // Deploy
-            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${MANIFEST_FILE}"
+            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
             sh "kubectl apply -f ${MANIFEST_FILE}"
             sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
             sh "kubectl rollout restart deployment ${SERVICE_NAME}"
@@ -108,18 +116,25 @@ pipeline {
         script {
           def SERVICE_NAME = "patient-service"
           def DIR_NAME = "services/patient-service"
-          def MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/patient-service.yaml"
+          def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/patient-service.yaml"
 
           withCredentials([
-            usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+            usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
           ]) {
             // FIX: Define FULL_IMAGE_NAME here where DOCKER_USER is available
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${env.IMAGE_TAG}"
+            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
 
+              // FIX: Force delete the image before building to bust Minikube's local cache
+              sh """
+                echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+                eval \$(minikube docker-env)
+                docker rmi -f ${FULL_IMAGE_NAME} || true
+              """
+              
               sh "docker build -t ${FULL_IMAGE_NAME} ."
               sh "docker push ${FULL_IMAGE_NAME}"
             }
@@ -132,7 +147,7 @@ pipeline {
               fi
             """
 
-            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${MANIFEST_FILE}"
+            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
             sh "kubectl apply -f ${MANIFEST_FILE}"
             sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
             sh "kubectl rollout restart deployment ${SERVICE_NAME}"
@@ -151,17 +166,24 @@ pipeline {
         script {
           def SERVICE_NAME = "scans-service"
           def DIR_NAME = "services/scans-service"
-          def MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/scans-service.yaml"
+          def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/scans-service.yaml"
 
           withCredentials([
-            usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+            usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
           ]) {
             // FIX: Define FULL_IMAGE_NAME here where DOCKER_USER is available
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${env.IMAGE_TAG}"
+            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+
+              // FIX: Force delete the image before building to bust Minikube's local cache
+              sh """
+                echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+                eval \$(minikube docker-env)
+                docker rmi -f ${FULL_IMAGE_NAME} || true
+              """
 
               sh "docker build -t ${FULL_IMAGE_NAME} ."
               sh "docker push ${FULL_IMAGE_NAME}"
@@ -175,7 +197,7 @@ pipeline {
               fi
             """
 
-            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${MANIFEST_FILE}"
+            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
             sh "kubectl apply -f ${MANIFEST_FILE}"
             sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
             sh "kubectl rollout restart deployment ${SERVICE_NAME}"
@@ -194,17 +216,24 @@ pipeline {
         script {
           def SERVICE_NAME = "appointment-service"
           def DIR_NAME = "services/appointment-service"
-          def MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/appointment-service.yaml"
+          def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/appointment-service.yaml"
 
           withCredentials([
-            usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+            usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
           ]) {
             // FIX: Define FULL_IMAGE_NAME here where DOCKER_USER is available
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${env.IMAGE_TAG}"
+            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+
+              // FIX: Force delete the image before building to bust Minikube's local cache
+              sh """
+                echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+                eval \$(minikube docker-env)
+                docker rmi -f ${FULL_IMAGE_NAME} || true
+              """
 
               sh "docker build -t ${FULL_IMAGE_NAME} ."
               sh "docker push ${FULL_IMAGE_NAME}"
@@ -218,7 +247,7 @@ pipeline {
               fi
             """
 
-            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${MANIFEST_FILE}"
+            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
             sh "kubectl apply -f ${MANIFEST_FILE}"
             sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
             sh "kubectl rollout restart deployment ${SERVICE_NAME}"
@@ -237,18 +266,25 @@ pipeline {
         script {
           def SERVICE_NAME = "billing-service"
           def DIR_NAME = "services/billing-service"
-          def MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/billing-service.yaml"
+          def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/billing-service.yaml"
 
           withCredentials([
-            usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+            usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
           ]) {
             // FIX: Define FULL_IMAGE_NAME here where DOCKER_USER is available
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${env.IMAGE_TAG}"
+            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
 
+              // FIX: Force delete the image before building to bust Minikube's local cache
+              sh """
+                echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+                eval \$(minikube docker-env)
+                docker rmi -f ${FULL_IMAGE_NAME} || true
+              """
+              
               sh "docker build -t ${FULL_IMAGE_NAME} ."
               sh "docker push ${FULL_IMAGE_NAME}"
             }
@@ -261,7 +297,7 @@ pipeline {
               fi
             """
 
-            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${MANIFEST_FILE}"
+            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
             sh "kubectl apply -f ${MANIFEST_FILE}"
             sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
             sh "kubectl rollout restart deployment ${SERVICE_NAME}"
@@ -280,17 +316,24 @@ pipeline {
         script {
           def SERVICE_NAME = "prescription-service"
           def DIR_NAME = "services/prescription-service"
-          def MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/prescription-service.yaml"
+          def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/prescription-service.yaml"
 
           withCredentials([
-            usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+            usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
           ]) {
             // FIX: Define FULL_IMAGE_NAME here where DOCKER_USER is available
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${env.IMAGE_TAG}"
+            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+
+              // FIX: Force delete the image before building to bust Minikube's local cache
+              sh """
+                echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+                eval \$(minikube docker-env)
+                docker rmi -f ${FULL_IMAGE_NAME} || true
+              """
 
               sh "docker build -t ${FULL_IMAGE_NAME} ."
               sh "docker push ${FULL_IMAGE_NAME}"
@@ -304,7 +347,7 @@ pipeline {
               fi
             """
 
-            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${MANIFEST_FILE}"
+            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
             sh "kubectl apply -f ${MANIFEST_FILE}"
             sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
             sh "kubectl rollout restart deployment ${SERVICE_NAME}"
@@ -323,17 +366,24 @@ pipeline {
         script {
           def SERVICE_NAME = "frontend"
           def DIR_NAME = "frontend"
-          def MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/frontend.yaml" // NOTE: Using frontend.yaml
+          def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/frontend.yaml" // NOTE: Using frontend.yaml
 
           withCredentials([
-            usernamePassword(credentialsId: env.DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+            usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
           ]) {
             // FIX: Define FULL_IMAGE_NAME here where DOCKER_USER is available
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${env.IMAGE_TAG}"
+            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+
+              // FIX: Force delete the image before building to bust Minikube's local cache
+              sh """
+                echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+                eval \$(minikube docker-env)
+                docker rmi -f ${FULL_IMAGE_NAME} || true
+              """
 
               sh "docker build -t ${FULL_IMAGE_NAME} ."
               sh "docker push ${FULL_IMAGE_NAME}"
@@ -347,7 +397,7 @@ pipeline {
               fi
             """
 
-            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${MANIFEST_FILE}"
+            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
             sh "kubectl apply -f ${MANIFEST_FILE}"
             sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
             sh "kubectl rollout restart deployment ${SERVICE_NAME}"
