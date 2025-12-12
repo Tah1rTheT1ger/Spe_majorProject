@@ -6,8 +6,12 @@ import PatientForm from '../components/PatientForm';
 
 export default function Patients() {
   const navigate = useNavigate();
-  const { token } = useContext(AuthContext);
+  const { token, user } = useContext(AuthContext);
   const [q, setQ] = useState('');
+
+  if (user?.role === 'patient') {
+    return <div style={{ padding: 20 }}>Access Denied. You cannot view other patients.</div>;
+  }
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);

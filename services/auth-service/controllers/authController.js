@@ -36,3 +36,13 @@ exports.login = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+exports.getDoctors = async (req, res) => {
+  try {
+    const doctors = await User.find({ role: 'doctor' }).select('-password');
+    res.json(doctors);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

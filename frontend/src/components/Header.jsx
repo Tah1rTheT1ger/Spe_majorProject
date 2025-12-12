@@ -21,9 +21,14 @@ export default function Header() {
         <div style={{ fontWeight: 'bold' }}>Medical ERP</div>
         <nav>
           <Link to="/" style={{ color: 'white', marginRight: 12 }}>Dashboard</Link>
-          <Link to="/patients" style={{ color: 'white', marginRight: 12 }}>Patients</Link>
-          <Link to="/patients" style={{ color: 'white', marginRight: 12 }}>Scans</Link>
-          <Link to="/prescriptions" style={{ color: 'white', marginRight: 12 }}>Prescriptions</Link>
+          {user?.role !== 'patient' && (
+            <Link to="/patients" style={{ color: 'white', marginRight: 12 }}>Patients</Link>
+          )}
+          {/* Assuming generic /scans route exists or will be added for 'My Scans' */}
+          <Link to="/scans" style={{ color: 'white', marginRight: 12 }}>Scans</Link>
+          {user?.role !== 'desk' && (
+            <Link to="/prescriptions" style={{ color: 'white', marginRight: 12 }}>Prescriptions</Link>
+          )}
           <Link to="/appointments" style={{ color: 'white', marginRight: 12 }}>Appointments</Link>
           <Link to="/billing" style={{ color: 'white' }}>Billing</Link>
         </nav>

@@ -74,6 +74,9 @@ pipeline {
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
+              // Run Automated Tests
+              sh "npm test"
+
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
 
@@ -97,11 +100,9 @@ pipeline {
               fi
             """
 
-            // Deploy
+            // Deploy using Ansible (Configuration Management & Roles)
             sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "kubectl apply -f ${MANIFEST_FILE}"
-            sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
-            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+            sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${MANIFEST_FILE} service_name=${SERVICE_NAME}\""
           }
         }
       }
@@ -126,6 +127,9 @@ pipeline {
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
+              // Run Automated Tests
+              sh "npm test"
+
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
 
@@ -148,10 +152,9 @@ pipeline {
               fi
             """
 
+            // Deploy using Ansible (Configuration Management & Roles)
             sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "kubectl apply -f ${MANIFEST_FILE}"
-            sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
-            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+            sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${MANIFEST_FILE} service_name=${SERVICE_NAME}\""
           }
         }
       }
@@ -176,6 +179,9 @@ pipeline {
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
+              // Run Automated Tests
+              sh "npm test"
+
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
 
@@ -198,10 +204,9 @@ pipeline {
               fi
             """
 
+            // Deploy using Ansible (Configuration Management & Roles)
             sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "kubectl apply -f ${MANIFEST_FILE}"
-            sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
-            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+            sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${MANIFEST_FILE} service_name=${SERVICE_NAME}\""
           }
         }
       }
@@ -226,6 +231,9 @@ pipeline {
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
+              // Run Automated Tests
+              sh "npm test"
+
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
 
@@ -248,10 +256,9 @@ pipeline {
               fi
             """
 
+            // Deploy using Ansible (Configuration Management & Roles)
             sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "kubectl apply -f ${MANIFEST_FILE}"
-            sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
-            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+            sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${MANIFEST_FILE} service_name=${SERVICE_NAME}\""
           }
         }
       }
@@ -276,6 +283,9 @@ pipeline {
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
+              // Run Automated Tests
+              sh "npm test"
+
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
 
@@ -298,10 +308,9 @@ pipeline {
               fi
             """
 
+            // Deploy using Ansible (Configuration Management & Roles)
             sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "kubectl apply -f ${MANIFEST_FILE}"
-            sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
-            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+            sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${MANIFEST_FILE} service_name=${SERVICE_NAME}\""
           }
         }
       }
@@ -326,6 +335,9 @@ pipeline {
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
+              // Run Automated Tests
+              sh "npm test"
+
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
 
@@ -348,10 +360,9 @@ pipeline {
               fi
             """
 
+            // Deploy using Ansible (Configuration Management & Roles)
             sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "kubectl apply -f ${MANIFEST_FILE}"
-            sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
-            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+            sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${MANIFEST_FILE} service_name=${SERVICE_NAME}\""
           }
         }
       }
@@ -376,6 +387,9 @@ pipeline {
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
+              // Run Automated Tests
+              sh "npm test"
+
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
 
@@ -398,10 +412,9 @@ pipeline {
               fi
             """
 
+            // Deploy using Ansible (Configuration Management & Roles)
             sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "kubectl apply -f ${MANIFEST_FILE}"
-            sh "kubectl rollout status deployment/${SERVICE_NAME} --timeout=180s || true"
-            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+            sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${MANIFEST_FILE} service_name=${SERVICE_NAME}\""
           }
         }
       }

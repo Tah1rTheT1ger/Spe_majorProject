@@ -1,0 +1,6 @@
+---
+- name: Deploy Service to Kubernetes
+  hosts: localhost
+  gather_facts: false
+  roles:
+    - role: deploy_k8s

@@ -24,6 +24,7 @@ export default function App() {
           <Route path="/" element={user ? <Dashboard /> : <Navigate to="/register" replace />} />
           <Route path="/patients" element={user ? <Patients /> : <Navigate to="/login" replace />} />
           <Route path="/patients/:patientId/scans" element={user ? <Scans /> : <Navigate to="/login" replace />} />
+          <Route path="/scans" element={user ? <Scans /> : <Navigate to="/login" replace />} />
           <Route path="/prescriptions" element={user ? <Prescriptions /> : <Navigate to="/login" replace />} />
           <Route path="/appointments" element={user ? <Appointments /> : <Navigate to="/login" replace />} />
           <Route path="/billing" element={user ? <Billing /> : <Navigate to="/login" replace />} />

@@ -1,0 +1,17 @@
+---
+- name: Apply Kubernetes Manifest
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ manifest_file }}"
+
+- name: Wait for Rollout to complete
+  shell: |
+    kubectl rollout status deployment/{{ service_name }} --timeout=180s || true
+  args:
+    executable: /bin/bash
+
+- name: Restart Deployment
+  shell: |
+    kubectl rollout restart deployment {{ service_name }}
+  args:
+    executable: /bin/bash

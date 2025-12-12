@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { getScanStreamUrl, getScanDownloadUrl } from '../api/scans';
+import { AuthContext } from '../contexts/AuthContext';
 
 export default function ScanCard({ scan, onDelete }) {
     const { _id, type, description, createdAt, originalName } = scan;
+    const { token } = useContext(AuthContext);
 
     const cardStyle = {
         background: '#ffffff',
@@ -101,6 +103,10 @@ export default function ScanCard({ scan, onDelete }) {
         flex: 0 // smaller
     };
 
+    // Append token to URLs
+    const streamUrl = `${getScanStreamUrl(_id)}?token=${token}`;
+    const downloadUrl = `${getScanDownloadUrl(_id)}?token=${token}`;
+
     return (
         <div
             style={cardStyle}
@@ -120,7 +126,7 @@ export default function ScanCard({ scan, onDelete }) {
 
             <div style={actionsStyle}>
                 <a
-                    href={getScanStreamUrl(_id)}
+                    href={streamUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={viewBtnStyle}
@@ -128,7 +134,7 @@ export default function ScanCard({ scan, onDelete }) {
                     View
                 </a>
                 <a
-                    href={getScanDownloadUrl(_id)}
+                    href={downloadUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={downloadBtnStyle}

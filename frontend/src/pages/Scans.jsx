@@ -3,46 +3,90 @@ import { useParams, Link } from 'react-router-dom';
 import { getScansByPatient, uploadScan, deleteScan } from '../api/scans';
 import ScanCard from '../components/ScanCard';
 import { AuthContext } from '../contexts/AuthContext';
+import api from '../api/apiClient';
 
 export default function Scans() {
-    const { patientId } = useParams();
-    const { token } = useContext(AuthContext);
+    const { patientId: paramPatientId } = useParams();
+    const { token, user } = useContext(AuthContext);
     const [scans, setScans] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [showUpload, setShowUpload] = useState(false);
     const [uploading, setUploading] = useState(false);
+
+    // Patient Selection State
+    const [selectedPatientId, setSelectedPatientId] = useState(paramPatientId || '');
+    const [patients, setPatients] = useState([]);
 
     // Upload Form State
     const [file, setFile] = useState(null);
     const [type, setType] = useState('xray');
     const [description, setDescription] = useState('');
 
+    useEffect(() => {
+        // Fetch patients if we need to select one (not patient role, and maybe no param)
+        const loadPatients = async () => {
+            if (user?.role !== 'patient' && token) {
+                try {
+                    const res = await api.get('http://localhost:4100/api/patients/search?q='); // Use search endpoint
+                    setPatients(res.data);
+                } catch (err) {
+                    console.error("Failed to load patients", err);
+                }
+            }
+        };
+        loadPatients();
+    }, [user, token]);
+
+    // Update selected patient if param changes
+    useEffect(() => {
+        if (paramPatientId) setSelectedPatientId(paramPatientId);
+    }, [paramPatientId]);
+
+    // Identify user's patient ID if they are a patient
+    useEffect(() => {
+        const setSelfPatientId = async () => {
+            if (user?.role === 'patient' && !paramPatientId) {
+                try {
+                    const patRes = await api.get('http://localhost:4100/api/patients/search?q=');
+                    const found = patRes.data.find(p => p.contact?.email === user.email);
+                    if (found) setSelectedPatientId(found._id);
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        };
+        setSelfPatientId();
+    }, [user, paramPatientId]);
+
     const fetchScans = async () => {
+        if (!selectedPatientId) return;
+        setLoading(true);
+        setError(null);
         try {
-            setLoading(true);
-            const res = await getScansByPatient(patientId);
+            const res = await getScansByPatient(selectedPatientId);
             setScans(res.data);
         } catch (err) {
             console.error(err);
-            setError('Failed to load scans. Ensure scan service is running.');
+            setError('Failed to load scans.');
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchScans();
+        if (selectedPatientId) fetchScans();
+        else setScans([]);
         // eslint-disable-next-line
-    }, [patientId]);
+    }, [selectedPatientId]);
 
     const handleUpload = async (e) => {
         e.preventDefault();
-        if (!file) return;
+        if (!file || !selectedPatientId) return;
 
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('patientId', patientId);
+        formData.append('patientId', selectedPatientId);
         formData.append('type', type);
         formData.append('description', description);
 
@@ -164,11 +208,20 @@ export default function Scans() {
         borderRadius: '8px',
         border: '1px solid #dfe6e9',
         fontSize: '1rem',
-        boxSizing: 'border-box' // Fix padding width issue
+        boxSizing: 'border-box'
     };
 
-    if (loading) return <div style={{ ...pageStyle, textAlign: 'center', marginTop: 100 }}>Loading scans...</div>;
-    if (error) return <div style={{ ...pageStyle, color: 'red' }}>{error} <Link to="/patients">Back</Link></div>;
+    const selectorStyle = {
+        padding: '10px',
+        borderRadius: '8px',
+        border: '1px solid #dfe6e9',
+        fontSize: '1rem',
+        marginBottom: '20px',
+        minWidth: '300px'
+    };
+
+    // if (loading) return <div style={{ ...pageStyle, textAlign: 'center', marginTop: 100 }}>Loading scans...</div>;
+    // if (error) return <div style={{ ...pageStyle, color: 'red' }}>{error} <Link to="/patients">Back</Link></div>;
 
     return (
         <div style={pageStyle}>
@@ -179,17 +232,45 @@ export default function Scans() {
                     <h1 style={titleStyle}>Patient Scans</h1>
                     <div style={subtitleStyle}>Manage medical imagery and reports.</div>
                 </div>
-                <button
-                    style={btnStyle}
-                    onClick={() => setShowUpload(true)}
-                    onMouseEnter={e => e.target.style.transform = 'translateY(-2px)'}
-                    onMouseLeave={e => e.target.style.transform = 'translateY(0)'}
-                >
-                    + Upload New Scan
-                </button>
+                {selectedPatientId && (
+                    <button
+                        style={btnStyle}
+                        onClick={() => setShowUpload(true)}
+                        onMouseEnter={e => e.target.style.transform = 'translateY(-2px)'}
+                        onMouseLeave={e => e.target.style.transform = 'translateY(0)'}
+                    >
+                        + Upload New Scan
+                    </button>
+                )}
+
             </div>
 
-            {scans.length === 0 ? (
+            {/* Patient Selector for non-patients */}
+            {user?.role !== 'patient' && !paramPatientId && (
+                <div style={{ marginBottom: '24px', background: '#f8f9fa', padding: '16px', borderRadius: '8px' }}>
+                    <label style={{ fontWeight: 600, marginRight: '10px' }}>Select Patient to View Scans:</label>
+                    <select
+                        value={selectedPatientId}
+                        onChange={e => setSelectedPatientId(e.target.value)}
+                        style={selectorStyle}
+                    >
+                        <option value="">-- Select Patient --</option>
+                        {patients.map(p => (
+                            <option key={p._id} value={p._id}>{p.firstName} {p.lastName} ({p.contact?.email})</option>
+                        ))}
+                    </select>
+                </div>
+            )}
+
+            {loading ? (
+                <div style={{ textAlign: 'center', marginTop: 40 }}>Loading...</div>
+            ) : error ? (
+                <div style={{ color: 'red' }}>{error}</div>
+            ) : !selectedPatientId ? (
+                <div style={{ textAlign: 'center', padding: '60px', color: '#95a5a6' }}>
+                    Please select a patient to view scans.
+                </div>
+            ) : scans.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '60px', background: '#f8f9fa', borderRadius: '12px' }}>
                     <h3 style={{ color: '#95a5a6' }}>No scans found for this patient.</h3>
                     <p style={{ color: '#bdc3c7' }}>Upload a new xray, MRI, or lab report to get started.</p>
