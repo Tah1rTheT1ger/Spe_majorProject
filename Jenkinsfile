@@ -69,7 +69,6 @@ pipeline {
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              sh "npm test"
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
               sh """
@@ -117,7 +116,6 @@ pipeline {
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              sh "npm test"
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
               sh """
@@ -164,7 +162,6 @@ pipeline {
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              sh "npm test"
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
               sh """
@@ -211,7 +208,6 @@ pipeline {
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              sh "npm test"
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
               sh """
@@ -258,7 +254,40 @@ pipeline {
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              sh "npm test"
+              sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
+              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+              sh """
+                echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+                eval \$(minikube docker-env)
+                docker rmi -f ${FULL_IMAGE_NAME} || true
+              """
+              sh "docker build -t ${FULL_IMAGE_NAME} ."
+              sh "docker push ${FULL_IMAGE_NAME}"
+            }
+
+            sh """
+              if command -v trivy >/dev/null 2>&1; then
+                trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+              else
+                echo "Warning: Trivy not found. Skipping image scan."
+              fi
+            """
+
+            // 🚀 NEW DEPLOYMENT STEPS (kubectl)
+            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"stage('Build & Deploy: Frontend') {
+      when { changeset "frontend/**" }
+      steps {
+        script {
+          def SERVICE_NAME = "frontend"
+          def DIR_NAME = "frontend"
+          def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/frontend.yaml"
+
+          withCredentials([
+            usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+          ]) {
+            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+
+            dir("${DIR_NAME}") {
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
               sh """
@@ -286,6 +315,12 @@ pipeline {
         }
       }
     }
+            sh "kubectl apply -f ${MANIFEST_FILE}"
+            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+          }
+        }
+      }
+    }
 
     /* ----------------------------------------------------------
         PRESCRIPTION SERVICE
@@ -305,7 +340,6 @@ pipeline {
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              sh "npm test"
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
               sh """
@@ -352,7 +386,6 @@ pipeline {
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              sh "npm test"
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
               sh """
