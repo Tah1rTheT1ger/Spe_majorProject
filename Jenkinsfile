@@ -1,7 +1,6 @@
 /**
- * Jenkinsfile — FINAL DEPLOYABLE VERSION (VAULT INTEGRATION & FULL COMPILATION FIX)
- * * This version applies the final 'script { def ... }' wrapper to resolve the 'Expected a step' error 
- * within the 'withVault' block across ALL stages.
+ * Jenkinsfile — FINAL DEPLOYABLE VERSION (VAULT INTEGRATION & PARAMETER FIX)
+ * * This version corrects the 'secrets' parameter name to 'vaultSecrets' as required by the Jenkins Vault Plugin.
  */
 pipeline {
   agent any
@@ -72,7 +71,8 @@ pipeline {
                 appRoleName: 'jenkins-ci-role', 
                 roleId: env.VAULT_ROLE_ID
             ],
-            secrets: [
+            // 🎯 FIX APPLIED HERE 🎯
+            vaultSecrets: [ 
                 [
                     path: 'secret/jenkins/docker', 
                     secretValues: [
@@ -83,10 +83,9 @@ pipeline {
             ]
         ]) {
           
-          // FIX APPLIED: Wrapped def in a script block
           script {
             def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME // Export for shell access
+            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
           }
 
           dir("${env.DIR_NAME}") {
@@ -137,7 +136,8 @@ pipeline {
                 appRoleName: 'jenkins-ci-role', 
                 roleId: env.VAULT_ROLE_ID
             ],
-            secrets: [
+            // 🎯 FIX APPLIED HERE 🎯
+            vaultSecrets: [ 
                 [
                     path: 'secret/jenkins/docker', 
                     secretValues: [
@@ -148,7 +148,6 @@ pipeline {
             ]
         ]) {
           
-          // FIX APPLIED: Wrapped def in a script block
           script {
             def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
             env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
@@ -202,7 +201,8 @@ pipeline {
                 appRoleName: 'jenkins-ci-role', 
                 roleId: env.VAULT_ROLE_ID
             ],
-            secrets: [
+            // 🎯 FIX APPLIED HERE 🎯
+            vaultSecrets: [ 
                 [
                     path: 'secret/jenkins/docker', 
                     secretValues: [
@@ -213,7 +213,6 @@ pipeline {
             ]
         ]) {
           
-          // FIX APPLIED: Wrapped def in a script block
           script {
             def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
             env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
@@ -267,7 +266,8 @@ pipeline {
                 appRoleName: 'jenkins-ci-role', 
                 roleId: env.VAULT_ROLE_ID
             ],
-            secrets: [
+            // 🎯 FIX APPLIED HERE 🎯
+            vaultSecrets: [ 
                 [
                     path: 'secret/jenkins/docker', 
                     secretValues: [
@@ -278,7 +278,6 @@ pipeline {
             ]
         ]) {
           
-          // FIX APPLIED: Wrapped def in a script block
           script {
             def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
             env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
@@ -332,7 +331,8 @@ pipeline {
                 appRoleName: 'jenkins-ci-role', 
                 roleId: env.VAULT_ROLE_ID
             ],
-            secrets: [
+            // 🎯 FIX APPLIED HERE 🎯
+            vaultSecrets: [ 
                 [
                     path: 'secret/jenkins/docker', 
                     secretValues: [
@@ -343,7 +343,6 @@ pipeline {
             ]
         ]) {
           
-          // FIX APPLIED: Wrapped def in a script block
           script {
             def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
             env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
@@ -397,7 +396,8 @@ pipeline {
                 appRoleName: 'jenkins-ci-role', 
                 roleId: env.VAULT_ROLE_ID
             ],
-            secrets: [
+            // 🎯 FIX APPLIED HERE 🎯
+            vaultSecrets: [ 
                 [
                     path: 'secret/jenkins/docker', 
                     secretValues: [
@@ -408,7 +408,6 @@ pipeline {
             ]
         ]) {
           
-          // FIX APPLIED: Wrapped def in a script block
           script {
             def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
             env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
@@ -462,7 +461,8 @@ pipeline {
                 appRoleName: 'jenkins-ci-role', 
                 roleId: env.VAULT_ROLE_ID
             ],
-            secrets: [
+            // 🎯 FIX APPLIED HERE 🎯
+            vaultSecrets: [ 
                 [
                     path: 'secret/jenkins/docker', 
                     secretValues: [
@@ -473,7 +473,6 @@ pipeline {
             ]
         ]) {
           
-          // FIX APPLIED: Wrapped def in a script block
           script {
             def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
             env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
