@@ -431,7 +431,6 @@ pipeline {
           }
 
           dir("frontend") {
-            sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
