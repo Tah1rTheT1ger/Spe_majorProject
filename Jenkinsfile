@@ -1,10 +1,6 @@
 /**
- * Jenkinsfile — FINAL VERSION (NO FUNCTIONS, FULL REPETITION)
- * This structure is optimized for success in a Minikube environment:
- * 1. FIX: DOCKER_USER scope is fixed by defining FULL_IMAGE_NAME inside withCredentials.
- * 2. FIX: Minikube image cache is forcibly deleted (docker rmi -f) before building/pushing.
- * 3. FIX: Deployment uses kubectl apply and rollout restart for robust creation/updates.
- * * NOTE: Assumes Kubeconfig is manually copied to /var/lib/jenkins/.kube/config on the Jenkins host.
+ * Jenkinsfile — FINAL VERSION (NATIVE KUBECTL DEPLOYMENT)
+ * FIX: Replaced Ansible deployment step with direct kubectl commands to resolve "file not found" errors.
  */
 pipeline {
   agent any
@@ -70,23 +66,17 @@ pipeline {
           withCredentials([
             usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
           ]) {
-            // FIX: Define FULL_IMAGE_NAME here where DOCKER_USER is available
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              // Run Automated Tests
               sh "npm test"
-
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-
-              // FIX: Force delete the image before building to bust Minikube's local cache
               sh """
                 echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
                 eval \$(minikube docker-env)
                 docker rmi -f ${FULL_IMAGE_NAME} || true
               """
-
               sh "docker build -t ${FULL_IMAGE_NAME} ."
               sh "docker push ${FULL_IMAGE_NAME}"
             }
@@ -100,9 +90,10 @@ pipeline {
               fi
             """
 
-            // Deploy using Ansible (Configuration Management & Roles)
+            // 🚀 NEW DEPLOYMENT STEPS (kubectl)
             sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${MANIFEST_FILE} service_name=${SERVICE_NAME}\""
+            sh "kubectl apply -f ${MANIFEST_FILE}"
+            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
           }
         }
       }
@@ -123,23 +114,17 @@ pipeline {
           withCredentials([
             usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
           ]) {
-            // FIX: Define FULL_IMAGE_NAME here where DOCKER_USER is available
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              // Run Automated Tests
               sh "npm test"
-
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-
-              // FIX: Force delete the image before building to bust Minikube's local cache
               sh """
                 echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
                 eval \$(minikube docker-env)
                 docker rmi -f ${FULL_IMAGE_NAME} || true
               """
-              
               sh "docker build -t ${FULL_IMAGE_NAME} ."
               sh "docker push ${FULL_IMAGE_NAME}"
             }
@@ -152,9 +137,10 @@ pipeline {
               fi
             """
 
-            // Deploy using Ansible (Configuration Management & Roles)
+            // 🚀 NEW DEPLOYMENT STEPS (kubectl)
             sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${MANIFEST_FILE} service_name=${SERVICE_NAME}\""
+            sh "kubectl apply -f ${MANIFEST_FILE}"
+            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
           }
         }
       }
@@ -175,23 +161,17 @@ pipeline {
           withCredentials([
             usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
           ]) {
-            // FIX: Define FULL_IMAGE_NAME here where DOCKER_USER is available
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              // Run Automated Tests
               sh "npm test"
-
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-
-              // FIX: Force delete the image before building to bust Minikube's local cache
               sh """
                 echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
                 eval \$(minikube docker-env)
                 docker rmi -f ${FULL_IMAGE_NAME} || true
               """
-
               sh "docker build -t ${FULL_IMAGE_NAME} ."
               sh "docker push ${FULL_IMAGE_NAME}"
             }
@@ -204,9 +184,10 @@ pipeline {
               fi
             """
 
-            // Deploy using Ansible (Configuration Management & Roles)
+            // 🚀 NEW DEPLOYMENT STEPS (kubectl)
             sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${MANIFEST_FILE} service_name=${SERVICE_NAME}\""
+            sh "kubectl apply -f ${MANIFEST_FILE}"
+            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
           }
         }
       }
@@ -227,23 +208,17 @@ pipeline {
           withCredentials([
             usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
           ]) {
-            // FIX: Define FULL_IMAGE_NAME here where DOCKER_USER is available
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              // Run Automated Tests
               sh "npm test"
-
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-
-              // FIX: Force delete the image before building to bust Minikube's local cache
               sh """
                 echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
                 eval \$(minikube docker-env)
                 docker rmi -f ${FULL_IMAGE_NAME} || true
               """
-
               sh "docker build -t ${FULL_IMAGE_NAME} ."
               sh "docker push ${FULL_IMAGE_NAME}"
             }
@@ -256,9 +231,10 @@ pipeline {
               fi
             """
 
-            // Deploy using Ansible (Configuration Management & Roles)
+            // 🚀 NEW DEPLOYMENT STEPS (kubectl)
             sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${MANIFEST_FILE} service_name=${SERVICE_NAME}\""
+            sh "kubectl apply -f ${MANIFEST_FILE}"
+            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
           }
         }
       }
@@ -279,23 +255,17 @@ pipeline {
           withCredentials([
             usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
           ]) {
-            // FIX: Define FULL_IMAGE_NAME here where DOCKER_USER is available
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              // Run Automated Tests
               sh "npm test"
-
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-
-              // FIX: Force delete the image before building to bust Minikube's local cache
               sh """
                 echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
                 eval \$(minikube docker-env)
                 docker rmi -f ${FULL_IMAGE_NAME} || true
               """
-              
               sh "docker build -t ${FULL_IMAGE_NAME} ."
               sh "docker push ${FULL_IMAGE_NAME}"
             }
@@ -308,9 +278,10 @@ pipeline {
               fi
             """
 
-            // Deploy using Ansible (Configuration Management & Roles)
+            // 🚀 NEW DEPLOYMENT STEPS (kubectl)
             sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${MANIFEST_FILE} service_name=${SERVICE_NAME}\""
+            sh "kubectl apply -f ${MANIFEST_FILE}"
+            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
           }
         }
       }
@@ -331,23 +302,17 @@ pipeline {
           withCredentials([
             usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
           ]) {
-            // FIX: Define FULL_IMAGE_NAME here where DOCKER_USER is available
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              // Run Automated Tests
               sh "npm test"
-
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-
-              // FIX: Force delete the image before building to bust Minikube's local cache
               sh """
                 echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
                 eval \$(minikube docker-env)
                 docker rmi -f ${FULL_IMAGE_NAME} || true
               """
-
               sh "docker build -t ${FULL_IMAGE_NAME} ."
               sh "docker push ${FULL_IMAGE_NAME}"
             }
@@ -360,9 +325,10 @@ pipeline {
               fi
             """
 
-            // Deploy using Ansible (Configuration Management & Roles)
+            // 🚀 NEW DEPLOYMENT STEPS (kubectl)
             sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${MANIFEST_FILE} service_name=${SERVICE_NAME}\""
+            sh "kubectl apply -f ${MANIFEST_FILE}"
+            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
           }
         }
       }
@@ -378,28 +344,22 @@ pipeline {
         script {
           def SERVICE_NAME = "frontend"
           def DIR_NAME = "frontend"
-          def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/frontend.yaml" // NOTE: Using frontend.yaml
+          def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/frontend.yaml"
 
           withCredentials([
             usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
           ]) {
-            // FIX: Define FULL_IMAGE_NAME here where DOCKER_USER is available
             def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
             dir("${DIR_NAME}") {
-              // Run Automated Tests
               sh "npm test"
-
               sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
               sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-
-              // FIX: Force delete the image before building to bust Minikube's local cache
               sh """
                 echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
                 eval \$(minikube docker-env)
                 docker rmi -f ${FULL_IMAGE_NAME} || true
               """
-
               sh "docker build -t ${FULL_IMAGE_NAME} ."
               sh "docker push ${FULL_IMAGE_NAME}"
             }
@@ -412,9 +372,10 @@ pipeline {
               fi
             """
 
-            // Deploy using Ansible (Configuration Management & Roles)
+            // 🚀 NEW DEPLOYMENT STEPS (kubectl)
             sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${MANIFEST_FILE} service_name=${SERVICE_NAME}\""
+            sh "kubectl apply -f ${MANIFEST_FILE}"
+            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
           }
         }
       }
