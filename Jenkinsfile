@@ -1,14 +1,17 @@
 /**
- * Jenkinsfile — FINAL DEPLOYABLE VERSION (VAULT INTEGRATION & FINAL SYNTAX FIX)
- * * This version removes the conflicting 'credentialsId' parameter from the secret list, 
- * relying on the successful Global Jenkins configuration.
+ * Jenkinsfile — FINAL PRODUCTION VERSION (Optimized for Speed and Security)
+ * * Security: Uses HashiCorp Vault for Docker credentials.
+ * * Optimization: Skips 'npm test' in the Frontend stage only.
+ * * Stability: Uses the definitive syntax fix for Groovy variable scope issues.
  */
 pipeline {
   agent any
 
   environment {
-    // These variables are now only used for the Groovy context (no longer passed as params)
-    VAULT_SECRET_ID_CREDS = 'full-vault-approle-config' 
+    // VAULT CONFIGURATION VARIABLES
+    VAULT_ROLE_ID = 'dcc579e4-a0f2-4de1-3aef-0a453b320860' 
+    VAULT_SECRET_ID_CREDS = 'full-vault-approle-config' // ID of the Jenkins Credential
+    VAULT_URL = "http://127.0.0.1:8200" // Requires port-forward: kubectl port-forward svc/vault-service 8200:8200
     
     // Other Environment Variables
     SONAR_HOST_URL  = 'http://localhost:9000'
@@ -50,7 +53,7 @@ pipeline {
     }
 
     /* ----------------------------------------------------------
-        AUTH SERVICE
+        AUTH SERVICE (Needs npm test)
     -----------------------------------------------------------*/
 
     stage('Build & Deploy: Auth Service') {
@@ -63,7 +66,6 @@ pipeline {
           env.MANIFEST_ABS_PATH = sh(script: "pwd", returnStdout: true).trim() + "/${env.MANIFEST_FILE}"
         }
 
-        // 🎯 FIX: Relying on GLOBAL VAULT CONFIGURATION 🎯
         withVault([
             vaultSecrets: [ 
                 [
@@ -71,28 +73,27 @@ pipeline {
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ]
-                    // Removed: credentialsId: env.VAULT_SECRET_ID_CREDS
+                    ],
+                    credentialsId: env.VAULT_SECRET_ID_CREDS
                 ]
             ]
         ]) {
           
           script {
-            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME 
+            env.FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
           }
 
           dir("${env.DIR_NAME}") {
-            sh "npm test"
+            sh "npm test" // <-- RETAINED
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
               echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              docker rmi -f \$FULL_IMAGE_NAME || true
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+            sh "docker build -t \$FULL_IMAGE_NAME ."
+            sh "docker push \$FULL_IMAGE_NAME"
           }
 
           sh """
@@ -110,7 +111,7 @@ pipeline {
     }
 
     /* ----------------------------------------------------------
-        PATIENT SERVICE
+        PATIENT SERVICE (Needs npm test)
     -----------------------------------------------------------*/
 
     stage('Build & Deploy: Patient Service') {
@@ -130,27 +131,27 @@ pipeline {
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ]
+                    ],
+                    credentialsId: env.VAULT_SECRET_ID_CREDS
                 ]
             ]
         ]) {
           
           script {
-            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
+            env.FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
           }
 
           dir("${env.DIR_NAME}") {
-            sh "npm test"
+            sh "npm test" // <-- RETAINED
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
               echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              docker rmi -f \$FULL_IMAGE_NAME || true
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+            sh "docker build -t \$FULL_IMAGE_NAME ."
+            sh "docker push \$FULL_IMAGE_NAME"
           }
 
           sh """
@@ -168,7 +169,7 @@ pipeline {
     }
 
     /* ----------------------------------------------------------
-        SCANS SERVICE
+        SCANS SERVICE (Needs npm test)
     -----------------------------------------------------------*/
 
     stage('Build & Deploy: Scans Service') {
@@ -188,27 +189,27 @@ pipeline {
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ]
+                    ],
+                    credentialsId: env.VAULT_SECRET_ID_CREDS
                 ]
             ]
         ]) {
           
           script {
-            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
+            env.FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
           }
 
           dir("${env.DIR_NAME}") {
-            sh "npm test"
+            sh "npm test" // <-- RETAINED
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
               echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              docker rmi -f \$FULL_IMAGE_NAME || true
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+            sh "docker build -t \$FULL_IMAGE_NAME ."
+            sh "docker push \$FULL_IMAGE_NAME"
           }
 
           sh """
@@ -226,7 +227,7 @@ pipeline {
     }
 
     /* ----------------------------------------------------------
-        APPOINTMENT SERVICE
+        APPOINTMENT SERVICE (Needs npm test)
     -----------------------------------------------------------*/
 
     stage('Build & Deploy: Appointment Service') {
@@ -246,27 +247,27 @@ pipeline {
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ]
+                    ],
+                    credentialsId: env.VAULT_SECRET_ID_CREDS
                 ]
             ]
         ]) {
           
           script {
-            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
+            env.FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
           }
 
           dir("${env.DIR_NAME}") {
-            sh "npm test"
+            sh "npm test" // <-- RETAINED
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
               echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              docker rmi -f \$FULL_IMAGE_NAME || true
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+            sh "docker build -t \$FULL_IMAGE_NAME ."
+            sh "docker push \$FULL_IMAGE_NAME"
           }
 
           sh """
@@ -284,7 +285,7 @@ pipeline {
     }
 
     /* ----------------------------------------------------------
-        BILLING SERVICE
+        BILLING SERVICE (Needs npm test)
     -----------------------------------------------------------*/
 
     stage('Build & Deploy: Billing Service') {
@@ -304,27 +305,27 @@ pipeline {
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ]
+                    ],
+                    credentialsId: env.VAULT_SECRET_ID_CREDS
                 ]
             ]
         ]) {
           
           script {
-            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
+            env.FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
           }
 
           dir("${env.DIR_NAME}") {
-            sh "npm test"
+            sh "npm test" // <-- RETAINED
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
               echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              docker rmi -f \$FULL_IMAGE_NAME || true
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+            sh "docker build -t \$FULL_IMAGE_NAME ."
+            sh "docker push \$FULL_IMAGE_NAME"
           }
 
           sh """
@@ -342,7 +343,7 @@ pipeline {
     }
 
     /* ----------------------------------------------------------
-        PRESCRIPTION SERVICE
+        PRESCRIPTION SERVICE (Needs npm test)
     -----------------------------------------------------------*/
 
     stage('Build & Deploy: Prescription Service') {
@@ -362,27 +363,27 @@ pipeline {
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ]
+                    ],
+                    credentialsId: env.VAULT_SECRET_ID_CREDS
                 ]
             ]
         ]) {
           
           script {
-            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
+            env.FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
           }
 
           dir("${env.DIR_NAME}") {
-            sh "npm test"
+            sh "npm test" // <-- RETAINED
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
               echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              docker rmi -f \$FULL_IMAGE_NAME || true
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+            sh "docker build -t \$FULL_IMAGE_NAME ."
+            sh "docker push \$FULL_IMAGE_NAME"
           }
 
           sh """
@@ -400,7 +401,7 @@ pipeline {
     }
 
     /* ----------------------------------------------------------
-        FRONTEND
+        FRONTEND (NO npm test)
     -----------------------------------------------------------*/
 
     stage('Build & Deploy: Frontend') {
@@ -420,26 +421,27 @@ pipeline {
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ]
+                    ],
+                    credentialsId: env.VAULT_SECRET_ID_CREDS
                 ]
             ]
         ]) {
           
           script {
-            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
+            env.FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
           }
 
           dir("frontend") {
+            // sh "npm test" <-- REMOVED AS REQUESTED
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
               echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              docker rmi -f \$FULL_IMAGE_NAME || true
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+            sh "docker build -t \$FULL_IMAGE_NAME ."
+            sh "docker push \$FULL_IMAGE_NAME"
           }
 
           sh """
