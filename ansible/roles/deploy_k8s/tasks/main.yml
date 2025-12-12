@@ -1,8 +1,9 @@
 ---
 - name: Apply Kubernetes Manifest
-  kubernetes.core.k8s:
-    state: present
-    src: "{{ manifest_file }}"
+  ansible.builtin.shell: |
+    kubectl apply -f {{ manifest_file }}
+  args:
+    executable: /bin/bash
 
 - name: Wait for Rollout to complete
   shell: |
