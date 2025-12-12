@@ -1,8 +1,8 @@
 /**
- * Jenkinsfile — FINAL PRODUCTION VERSION (Optimized for Speed and Security)
- * * Security: Uses HashiCorp Vault for Docker credentials.
- * * Optimization: Skips 'npm test' in the Frontend stage only.
- * * Stability: Uses the definitive syntax fix for Groovy variable scope issues.
+ * Jenkinsfile — FINAL DEPLOYABLE VERSION (COMPLETE CI/CD)
+ * * Features: HashiCorp Vault (Secure Storage), Ansible Roles (Advanced CM), Trivy Scan.
+ * * Stability: Final Groovy syntax fixes applied across all stages.
+ * * Optimization: npm test skipped for 'frontend'.
  */
 pipeline {
   agent any
@@ -11,7 +11,7 @@ pipeline {
     // VAULT CONFIGURATION VARIABLES
     VAULT_ROLE_ID = 'dcc579e4-a0f2-4de1-3aef-0a453b320860' 
     VAULT_SECRET_ID_CREDS = 'full-vault-approle-config' // ID of the Jenkins Credential
-    VAULT_URL = "http://127.0.0.1:8200" // Requires port-forward: kubectl port-forward svc/vault-service 8200:8200
+    VAULT_URL = "http://127.0.0.1:8200" // Requires separate port-forwarding to be running
     
     // Other Environment Variables
     SONAR_HOST_URL  = 'http://localhost:9000'
@@ -53,7 +53,7 @@ pipeline {
     }
 
     /* ----------------------------------------------------------
-        AUTH SERVICE (Needs npm test)
+        AUTH SERVICE (Includes npm test)
     -----------------------------------------------------------*/
 
     stage('Build & Deploy: Auth Service') {
@@ -84,7 +84,7 @@ pipeline {
           }
 
           dir("${env.DIR_NAME}") {
-            sh "npm test" // <-- RETAINED
+            sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
@@ -111,7 +111,7 @@ pipeline {
     }
 
     /* ----------------------------------------------------------
-        PATIENT SERVICE (Needs npm test)
+        PATIENT SERVICE (Includes npm test)
     -----------------------------------------------------------*/
 
     stage('Build & Deploy: Patient Service') {
@@ -142,7 +142,7 @@ pipeline {
           }
 
           dir("${env.DIR_NAME}") {
-            sh "npm test" // <-- RETAINED
+            sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
@@ -169,7 +169,7 @@ pipeline {
     }
 
     /* ----------------------------------------------------------
-        SCANS SERVICE (Needs npm test)
+        SCANS SERVICE (Includes npm test)
     -----------------------------------------------------------*/
 
     stage('Build & Deploy: Scans Service') {
@@ -200,7 +200,7 @@ pipeline {
           }
 
           dir("${env.DIR_NAME}") {
-            sh "npm test" // <-- RETAINED
+            sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
@@ -227,7 +227,7 @@ pipeline {
     }
 
     /* ----------------------------------------------------------
-        APPOINTMENT SERVICE (Needs npm test)
+        APPOINTMENT SERVICE (Includes npm test)
     -----------------------------------------------------------*/
 
     stage('Build & Deploy: Appointment Service') {
@@ -258,7 +258,7 @@ pipeline {
           }
 
           dir("${env.DIR_NAME}") {
-            sh "npm test" // <-- RETAINED
+            sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
@@ -285,7 +285,7 @@ pipeline {
     }
 
     /* ----------------------------------------------------------
-        BILLING SERVICE (Needs npm test)
+        BILLING SERVICE (Includes npm test)
     -----------------------------------------------------------*/
 
     stage('Build & Deploy: Billing Service') {
@@ -316,7 +316,7 @@ pipeline {
           }
 
           dir("${env.DIR_NAME}") {
-            sh "npm test" // <-- RETAINED
+            sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
@@ -343,7 +343,7 @@ pipeline {
     }
 
     /* ----------------------------------------------------------
-        PRESCRIPTION SERVICE (Needs npm test)
+        PRESCRIPTION SERVICE (Includes npm test)
     -----------------------------------------------------------*/
 
     stage('Build & Deploy: Prescription Service') {
@@ -374,7 +374,7 @@ pipeline {
           }
 
           dir("${env.DIR_NAME}") {
-            sh "npm test" // <-- RETAINED
+            sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
@@ -432,7 +432,7 @@ pipeline {
           }
 
           dir("frontend") {
-            // sh "npm test" <-- REMOVED AS REQUESTED
+            // npm test is skipped here
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
