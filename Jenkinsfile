@@ -1,14 +1,16 @@
 /**
- * Jenkinsfile — FINAL DEPLOYABLE VERSION (VAULT INTEGRATION COMPLETE)
- * * This version uses the single 'full-vault-approle-config' credential ID 
- * to securely access Docker PAT from HashiCorp Vault across all service stages.
+ * Jenkinsfile — FINAL DEPLOYABLE VERSION (VAULT INTEGRATION & FULL COMPILATION FIX)
+ * * This version applies the FINAL 'script { def ... }' wrapper to resolve the 'Expected a step' error 
+ * within the 'withVault' block across ALL stages.
  */
 pipeline {
   agent any
 
   environment {
-    // These variables are now purely descriptive, Vault handles authentication details
-    VAULT_SECRET_ID_CREDS = 'full-vault-approle-config' 
+    // VAULT CONFIGURATION VARIABLES
+    VAULT_ROLE_ID = 'dcc579e4-a0f2-4de1-3aef-0a453b320860' 
+    VAULT_SECRET_ID_CREDS = 'full-vault-approle-config' // ID of the Jenkins Credential
+    VAULT_URL = "http://vault-service.default.svc.cluster.local:8200" 
     
     // Other Environment Variables
     SONAR_HOST_URL  = 'http://localhost:9000'
@@ -63,7 +65,6 @@ pipeline {
           env.MANIFEST_ABS_PATH = sh(script: "pwd", returnStdout: true).trim() + "/${env.MANIFEST_FILE}"
         }
 
-        // 🎯 VAULT INTEGRATION: Reference the single combined credential ID 🎯
         withVault([
             vaultSecrets: [ 
                 [
@@ -72,29 +73,33 @@ pipeline {
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
                     ],
-                    credentialsId: env.VAULT_SECRET_ID_CREDS // Uses 'full-vault-approle-config'
+                    credentialsId: env.VAULT_SECRET_ID_CREDS
                 ]
             ]
         ]) {
           
-          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
+          // 🎯 FINAL FIX APPLIED HERE 🎯
+          script {
+            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
+            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME // Export to environment for shell access
+          }
 
           dir("${env.DIR_NAME}") {
             sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${FULL_IMAGE_NAME} || true
+              docker rmi -f ${env.FULL_IMAGE_NAME} || true
             """
-            sh "docker build -t ${FULL_IMAGE_NAME} ."
-            sh "docker push ${FULL_IMAGE_NAME}"
+            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
+            sh "docker push ${env.FULL_IMAGE_NAME}"
           }
 
           sh """
             if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
             else
               echo "Warning: Trivy not found. Skipping image scan."
             fi
@@ -133,24 +138,28 @@ pipeline {
             ]
         ]) {
           
-          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
+          // 🎯 FINAL FIX APPLIED HERE 🎯
+          script {
+            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
+            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
+          }
 
           dir("${env.DIR_NAME}") {
             sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${FULL_IMAGE_NAME} || true
+              docker rmi -f ${env.FULL_IMAGE_NAME} || true
             """
-            sh "docker build -t ${FULL_IMAGE_NAME} ."
-            sh "docker push ${FULL_IMAGE_NAME}"
+            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
+            sh "docker push ${env.FULL_IMAGE_NAME}"
           }
 
           sh """
             if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
             else
               echo "Warning: Trivy not found. Skipping image scan."
             fi
@@ -189,24 +198,28 @@ pipeline {
             ]
         ]) {
           
-          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
+          // 🎯 FINAL FIX APPLIED HERE 🎯
+          script {
+            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
+            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
+          }
 
           dir("${env.DIR_NAME}") {
             sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${FULL_IMAGE_NAME} || true
+              docker rmi -f ${env.FULL_IMAGE_NAME} || true
             """
-            sh "docker build -t ${FULL_IMAGE_NAME} ."
-            sh "docker push ${FULL_IMAGE_NAME}"
+            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
+            sh "docker push ${env.FULL_IMAGE_NAME}"
           }
 
           sh """
             if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
             else
               echo "Warning: Trivy not found. Skipping image scan."
             fi
@@ -245,24 +258,28 @@ pipeline {
             ]
         ]) {
           
-          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
+          // 🎯 FINAL FIX APPLIED HERE 🎯
+          script {
+            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
+            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
+          }
 
           dir("${env.DIR_NAME}") {
             sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${FULL_IMAGE_NAME} || true
+              docker rmi -f ${env.FULL_IMAGE_NAME} || true
             """
-            sh "docker build -t ${FULL_IMAGE_NAME} ."
-            sh "docker push ${FULL_IMAGE_NAME}"
+            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
+            sh "docker push ${env.FULL_IMAGE_NAME}"
           }
 
           sh """
             if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
             else
               echo "Warning: Trivy not found. Skipping image scan."
             fi
@@ -301,24 +318,28 @@ pipeline {
             ]
         ]) {
           
-          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
+          // 🎯 FINAL FIX APPLIED HERE 🎯
+          script {
+            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
+            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
+          }
 
           dir("${env.DIR_NAME}") {
             sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${FULL_IMAGE_NAME} || true
+              docker rmi -f ${env.FULL_IMAGE_NAME} || true
             """
-            sh "docker build -t ${FULL_IMAGE_NAME} ."
-            sh "docker push ${FULL_IMAGE_NAME}"
+            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
+            sh "docker push ${env.FULL_IMAGE_NAME}"
           }
 
           sh """
             if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
             else
               echo "Warning: Trivy not found. Skipping image scan."
             fi
@@ -357,24 +378,28 @@ pipeline {
             ]
         ]) {
           
-          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
+          // 🎯 FINAL FIX APPLIED HERE 🎯
+          script {
+            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
+            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
+          }
 
           dir("${env.DIR_NAME}") {
             sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${FULL_IMAGE_NAME} || true
+              docker rmi -f ${env.FULL_IMAGE_NAME} || true
             """
-            sh "docker build -t ${FULL_IMAGE_NAME} ."
-            sh "docker push ${FULL_IMAGE_NAME}"
+            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
+            sh "docker push ${env.FULL_IMAGE_NAME}"
           }
 
           sh """
             if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
             else
               echo "Warning: Trivy not found. Skipping image scan."
             fi
@@ -413,24 +438,28 @@ pipeline {
             ]
         ]) {
           
-          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
+          // 🎯 FINAL FIX APPLIED HERE 🎯
+          script {
+            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
+            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
+          }
 
-          dir("${env.DIR_NAME}") {
+          dir("frontend") {
             sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${FULL_IMAGE_NAME} || true
+              docker rmi -f ${env.FULL_IMAGE_NAME} || true
             """
-            sh "docker build -t ${FULL_IMAGE_NAME} ."
-            sh "docker push ${FULL_IMAGE_NAME}"
+            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
+            sh "docker push ${env.FULL_IMAGE_NAME}"
           }
 
           sh """
             if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
             else
               echo "Warning: Trivy not found. Skipping image scan."
             fi
