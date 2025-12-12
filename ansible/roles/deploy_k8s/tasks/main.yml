@@ -1,18 +1,15 @@
 ---
 - name: Apply Kubernetes Manifest
   ansible.builtin.shell: |
+    # Apply the deployment file (changes image tag placeholder)
     kubectl apply -f {{ manifest_file }}
-  args:
-    executable: /bin/bash
+    
+    # CRITICAL: Wait for the apply to finish
+    kubectl rollout status deployment/{{ service_name }} --timeout=180s
 
-- name: Wait for Rollout to complete
-  shell: |
-    kubectl rollout status deployment/{{ service_name }} --timeout=180s || true
-  args:
-    executable: /bin/bash
-
-- name: Restart Deployment
-  shell: |
+    # CRITICAL: Force a full restart, which makes Kubernetes pull the image again
+    # This is essential when using the ':latest' tag
     kubectl rollout restart deployment {{ service_name }}
+
   args:
     executable: /bin/bash
