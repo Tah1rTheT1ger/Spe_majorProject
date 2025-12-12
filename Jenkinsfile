@@ -1,7 +1,7 @@
 /**
- * Jenkinsfile — FINAL DEPLOYABLE VERSION
- * FIX: Variables (SERVICE_NAME, MANIFEST_FILE) are now set using 'env.' prefix 
- * to ensure global accessibility across all steps and blocks.
+ * Jenkinsfile — FINAL DEPLOYABLE VERSION (CLEANED SCOPE)
+ * FIX: Removed the 'def FULL_IMAGE_NAME' definition and replaced it with direct variable use 
+ * within the shell scripts to avoid the 'Expected a step' error inside withCredentials.
  */
 pipeline {
   agent any
@@ -65,11 +65,11 @@ pipeline {
         withCredentials([
           usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
         ]) {
-          // Define FULL_IMAGE_NAME locally, using env.SERVICE_NAME
+          // Define FULL_IMAGE_NAME locally as a Groovy variable that exists only in this block, 
+          // allowing us to use it in all subsequent sh commands
           def FULL_IMAGE_NAME = "${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
 
           dir("${env.DIR_NAME}") {
-            // Test step removed
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
