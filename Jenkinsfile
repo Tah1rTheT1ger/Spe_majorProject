@@ -339,53 +339,53 @@ pipeline {
     stage('Build & Deploy: Frontend') {
       when { changeset "frontend/**" }
       steps {
+        // 1. Define global-like service environment variables (Correct location)
         script {
-          // 1. Define service parameters as environment variables
           env.SERVICE_NAME = "frontend"
           env.DIR_NAME = "frontend"
           env.MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/frontend.yaml"
-          
-          // We no longer need the absolute path (env.MANIFEST_ABS_PATH) calculation for Ansible,
-          // as kubectl works fine with the relative path from the workspace root.
+          // CRITICAL: Calculate absolute path for Ansible/Deployment
+          env.MANIFEST_ABS_PATH = sh(script: "pwd", returnStdout: true).trim() + "/${env.MANIFEST_FILE}"
         }
 
         withCredentials([
           usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
         ]) {
-          // Define FULL_IMAGE_NAME
-          def FULL_IMAGE_NAME = "${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
+          // 🎯 FINAL FIX: Wrap the 'def' statement in a 'script' block 
+          // This makes the definition a legal executable step.
+          script {
+            def FULL_IMAGE_NAME = "${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
+            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME // Export to environment for shell access
+          }
 
           dir("${env.DIR_NAME}") {
             // Build & Push Steps
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${FULL_IMAGE_NAME} || true
+              docker rmi -f ${env.FULL_IMAGE_NAME} || true
             """
-            sh "docker build -t ${FULL_IMAGE_NAME} ."
-            sh "docker push ${FULL_IMAGE_NAME}"
+            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
+            sh "docker push ${env.FULL_IMAGE_NAME}"
           }
 
           // Trivy
           sh """
             if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
             else
               echo "Warning: Trivy not found. Skipping image scan."
             fi
           """
 
-          // 🚀 DEPLOYMENT STEPS (Direct kubectl applied from workspace root)
-          // 1. Replace placeholder (MANIFEST_FILE is k8s/frontend.yaml)
-          sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
+          // DEPLOYMENT STEPS (Ansible Integration using Absolute Path)
+          // 1. Replace placeholder using the ABSOLUTE PATH
+          sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_ABS_PATH}"
           
-          // 2. Apply the manifest
-          sh "kubectl apply -f ${env.MANIFEST_FILE}"
-          
-          // 3. Force Rollout Restart (CRITICAL for updating the :latest image)
-          sh "kubectl rollout restart deployment ${env.SERVICE_NAME}"
+          // 2. Use Ansible, passing the ABSOLUTE PATH
+          sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${env.MANIFEST_ABS_PATH} service_name=${env.SERVICE_NAME}\""
         }
       }
     }
