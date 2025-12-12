@@ -1,0 +1,38 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vault
+  labels:
+    app: vault
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vault
+  template:
+    metadata:
+      labels:
+        app: vault
+    spec:
+      containers:
+      - name: vault
+        image: hashicorp/vault:1.15.0 # Use a stable version
+        ports:
+        - containerPort: 8200
+        env:
+        - name: VAULT_DEV_ROOT_TOKEN_ID
+          value: "root-token" # Use a known root token for easy access
+        command: ["vault", "server", "-dev"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault-service
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8200
+    targetPort: 8200
+  selector:
+    app: vault
