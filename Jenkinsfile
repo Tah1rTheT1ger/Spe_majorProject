@@ -1,6 +1,7 @@
 /**
- * Jenkinsfile — FINAL VERSION (NATIVE KUBECTL DEPLOYMENT)
- * FIX: Replaced Ansible deployment step with direct kubectl commands to resolve "file not found" errors.
+ * Jenkinsfile — FINAL VERSION (TESTS REMOVED)
+ * * This version incorporates all previous fixes (Groovy scope, kubectl deployment, Docker cache management) 
+ * but has the 'npm test' step removed from all service stages as requested.
  */
 pipeline {
   agent any
@@ -58,42 +59,41 @@ pipeline {
     stage('Build & Deploy: Auth Service') {
       when { changeset "services/auth-service/**" }
       steps {
-        script {
-          def SERVICE_NAME = "auth-service"
-          def DIR_NAME = "services/auth-service"
-          def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/auth-service.yaml"
+        def SERVICE_NAME = "auth-service"
+        def DIR_NAME = "services/auth-service"
+        def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/auth-service.yaml"
 
-          withCredentials([
-            usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
-          ]) {
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+        withCredentials([
+          usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+        ]) {
+          def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
-            dir("${DIR_NAME}") {
-              sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
-              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-              sh """
-                echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
-                eval \$(minikube docker-env)
-                docker rmi -f ${FULL_IMAGE_NAME} || true
-              """
-              sh "docker build -t ${FULL_IMAGE_NAME} ."
-              sh "docker push ${FULL_IMAGE_NAME}"
-            }
-
-            // Trivy
+          dir("${DIR_NAME}") {
+            // REMOVED: sh "npm test" 
+            sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
+            sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              if command -v trivy >/dev/null 2>&1; then
-                trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
-              else
-                echo "Warning: Trivy not found. Skipping image scan."
-              fi
+              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+              eval \$(minikube docker-env)
+              docker rmi -f ${FULL_IMAGE_NAME} || true
             """
-
-            // 🚀 NEW DEPLOYMENT STEPS (kubectl)
-            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "kubectl apply -f ${MANIFEST_FILE}"
-            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+            sh "docker build -t ${FULL_IMAGE_NAME} ."
+            sh "docker push ${FULL_IMAGE_NAME}"
           }
+
+          // Trivy
+          sh """
+            if command -v trivy >/dev/null 2>&1; then
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+            else
+              echo "Warning: Trivy not found. Skipping image scan."
+            fi
+          """
+
+          // DEPLOYMENT STEPS (kubectl)
+          sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
+          sh "kubectl apply -f ${MANIFEST_FILE}"
+          sh "kubectl rollout restart deployment ${SERVICE_NAME}"
         }
       }
     }
@@ -105,41 +105,40 @@ pipeline {
     stage('Build & Deploy: Patient Service') {
       when { changeset "services/patient-service/**" }
       steps {
-        script {
-          def SERVICE_NAME = "patient-service"
-          def DIR_NAME = "services/patient-service"
-          def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/patient-service.yaml"
+        def SERVICE_NAME = "patient-service"
+        def DIR_NAME = "services/patient-service"
+        def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/patient-service.yaml"
 
-          withCredentials([
-            usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
-          ]) {
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+        withCredentials([
+          usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+        ]) {
+          def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
-            dir("${DIR_NAME}") {
-              sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
-              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-              sh """
-                echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
-                eval \$(minikube docker-env)
-                docker rmi -f ${FULL_IMAGE_NAME} || true
-              """
-              sh "docker build -t ${FULL_IMAGE_NAME} ."
-              sh "docker push ${FULL_IMAGE_NAME}"
-            }
-
+          dir("${DIR_NAME}") {
+            // REMOVED: sh "npm test"
+            sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
+            sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              if command -v trivy >/dev/null 2>&1; then
-                trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
-              else
-                echo "Warning: Trivy not found. Skipping image scan."
-              fi
+              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+              eval \$(minikube docker-env)
+              docker rmi -f ${FULL_IMAGE_NAME} || true
             """
-
-            // 🚀 NEW DEPLOYMENT STEPS (kubectl)
-            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "kubectl apply -f ${MANIFEST_FILE}"
-            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+            sh "docker build -t ${FULL_IMAGE_NAME} ."
+            sh "docker push ${FULL_IMAGE_NAME}"
           }
+
+          sh """
+            if command -v trivy >/dev/null 2>&1; then
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+            else
+              echo "Warning: Trivy not found. Skipping image scan."
+            fi
+          """
+
+          // DEPLOYMENT STEPS (kubectl)
+          sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
+          sh "kubectl apply -f ${MANIFEST_FILE}"
+          sh "kubectl rollout restart deployment ${SERVICE_NAME}"
         }
       }
     }
@@ -151,41 +150,40 @@ pipeline {
     stage('Build & Deploy: Scans Service') {
       when { changeset "services/scans-service/**" }
       steps {
-        script {
-          def SERVICE_NAME = "scans-service"
-          def DIR_NAME = "services/scans-service"
-          def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/scans-service.yaml"
+        def SERVICE_NAME = "scans-service"
+        def DIR_NAME = "services/scans-service"
+        def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/scans-service.yaml"
 
-          withCredentials([
-            usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
-          ]) {
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+        withCredentials([
+          usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+        ]) {
+          def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
-            dir("${DIR_NAME}") {
-              sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
-              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-              sh """
-                echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
-                eval \$(minikube docker-env)
-                docker rmi -f ${FULL_IMAGE_NAME} || true
-              """
-              sh "docker build -t ${FULL_IMAGE_NAME} ."
-              sh "docker push ${FULL_IMAGE_NAME}"
-            }
-
+          dir("${DIR_NAME}") {
+            // REMOVED: sh "npm test"
+            sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
+            sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              if command -v trivy >/dev/null 2>&1; then
-                trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
-              else
-                echo "Warning: Trivy not found. Skipping image scan."
-              fi
+              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+              eval \$(minikube docker-env)
+              docker rmi -f ${FULL_IMAGE_NAME} || true
             """
-
-            // 🚀 NEW DEPLOYMENT STEPS (kubectl)
-            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "kubectl apply -f ${MANIFEST_FILE}"
-            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+            sh "docker build -t ${FULL_IMAGE_NAME} ."
+            sh "docker push ${FULL_IMAGE_NAME}"
           }
+
+          sh """
+            if command -v trivy >/dev/null 2>&1; then
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+            else
+              echo "Warning: Trivy not found. Skipping image scan."
+            fi
+          """
+
+          // DEPLOYMENT STEPS (kubectl)
+          sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
+          sh "kubectl apply -f ${MANIFEST_FILE}"
+          sh "kubectl rollout restart deployment ${SERVICE_NAME}"
         }
       }
     }
@@ -197,41 +195,40 @@ pipeline {
     stage('Build & Deploy: Appointment Service') {
       when { changeset "services/appointment-service/**" }
       steps {
-        script {
-          def SERVICE_NAME = "appointment-service"
-          def DIR_NAME = "services/appointment-service"
-          def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/appointment-service.yaml"
+        def SERVICE_NAME = "appointment-service"
+        def DIR_NAME = "services/appointment-service"
+        def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/appointment-service.yaml"
 
-          withCredentials([
-            usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
-          ]) {
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+        withCredentials([
+          usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+        ]) {
+          def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
-            dir("${DIR_NAME}") {
-              sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
-              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-              sh """
-                echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
-                eval \$(minikube docker-env)
-                docker rmi -f ${FULL_IMAGE_NAME} || true
-              """
-              sh "docker build -t ${FULL_IMAGE_NAME} ."
-              sh "docker push ${FULL_IMAGE_NAME}"
-            }
-
+          dir("${DIR_NAME}") {
+            // REMOVED: sh "npm test"
+            sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
+            sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              if command -v trivy >/dev/null 2>&1; then
-                trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
-              else
-                echo "Warning: Trivy not found. Skipping image scan."
-              fi
+              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+              eval \$(minikube docker-env)
+              docker rmi -f ${FULL_IMAGE_NAME} || true
             """
-
-            // 🚀 NEW DEPLOYMENT STEPS (kubectl)
-            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "kubectl apply -f ${MANIFEST_FILE}"
-            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+            sh "docker build -t ${FULL_IMAGE_NAME} ."
+            sh "docker push ${FULL_IMAGE_NAME}"
           }
+
+          sh """
+            if command -v trivy >/dev/null 2>&1; then
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+            else
+              echo "Warning: Trivy not found. Skipping image scan."
+            fi
+          """
+
+          // DEPLOYMENT STEPS (kubectl)
+          sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
+          sh "kubectl apply -f ${MANIFEST_FILE}"
+          sh "kubectl rollout restart deployment ${SERVICE_NAME}"
         }
       }
     }
@@ -243,81 +240,40 @@ pipeline {
     stage('Build & Deploy: Billing Service') {
       when { changeset "services/billing-service/**" }
       steps {
-        script {
-          def SERVICE_NAME = "billing-service"
-          def DIR_NAME = "services/billing-service"
-          def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/billing-service.yaml"
+        def SERVICE_NAME = "billing-service"
+        def DIR_NAME = "services/billing-service"
+        def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/billing-service.yaml"
 
-          withCredentials([
-            usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
-          ]) {
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+        withCredentials([
+          usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+        ]) {
+          def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
-            dir("${DIR_NAME}") {
-              sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
-              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-              sh """
-                echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
-                eval \$(minikube docker-env)
-                docker rmi -f ${FULL_IMAGE_NAME} || true
-              """
-              sh "docker build -t ${FULL_IMAGE_NAME} ."
-              sh "docker push ${FULL_IMAGE_NAME}"
-            }
-
+          dir("${DIR_NAME}") {
+            // REMOVED: sh "npm test"
+            sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
+            sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              if command -v trivy >/dev/null 2>&1; then
-                trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
-              else
-                echo "Warning: Trivy not found. Skipping image scan."
-              fi
+              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+              eval \$(minikube docker-env)
+              docker rmi -f ${FULL_IMAGE_NAME} || true
             """
-
-            // 🚀 NEW DEPLOYMENT STEPS (kubectl)
-            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"stage('Build & Deploy: Frontend') {
-      when { changeset "frontend/**" }
-      steps {
-        script {
-          def SERVICE_NAME = "frontend"
-          def DIR_NAME = "frontend"
-          def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/frontend.yaml"
-
-          withCredentials([
-            usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
-          ]) {
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
-
-            dir("${DIR_NAME}") {
-              sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
-              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-              sh """
-                echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
-                eval \$(minikube docker-env)
-                docker rmi -f ${FULL_IMAGE_NAME} || true
-              """
-              sh "docker build -t ${FULL_IMAGE_NAME} ."
-              sh "docker push ${FULL_IMAGE_NAME}"
-            }
-
-            sh """
-              if command -v trivy >/dev/null 2>&1; then
-                trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
-              else
-                echo "Warning: Trivy not found. Skipping image scan."
-              fi
-            """
-
-            // 🚀 NEW DEPLOYMENT STEPS (kubectl)
-            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "kubectl apply -f ${MANIFEST_FILE}"
-            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+            sh "docker build -t ${FULL_IMAGE_NAME} ."
+            sh "docker push ${FULL_IMAGE_NAME}"
           }
-        }
-      }
-    }
-            sh "kubectl apply -f ${MANIFEST_FILE}"
-            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
-          }
+
+          sh """
+            if command -v trivy >/dev/null 2>&1; then
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+            else
+              echo "Warning: Trivy not found. Skipping image scan."
+            fi
+          """
+
+          // DEPLOYMENT STEPS (kubectl)
+          sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
+          sh "kubectl apply -f ${MANIFEST_FILE}"
+          sh "kubectl rollout restart deployment ${SERVICE_NAME}"
         }
       }
     }
@@ -329,41 +285,40 @@ pipeline {
     stage('Build & Deploy: Prescription Service') {
       when { changeset "services/prescription-service/**" }
       steps {
-        script {
-          def SERVICE_NAME = "prescription-service"
-          def DIR_NAME = "services/prescription-service"
-          def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/prescription-service.yaml"
+        def SERVICE_NAME = "prescription-service"
+        def DIR_NAME = "services/prescription-service"
+        def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/prescription-service.yaml"
 
-          withCredentials([
-            usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
-          ]) {
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+        withCredentials([
+          usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+        ]) {
+          def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
-            dir("${DIR_NAME}") {
-              sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
-              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-              sh """
-                echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
-                eval \$(minikube docker-env)
-                docker rmi -f ${FULL_IMAGE_NAME} || true
-              """
-              sh "docker build -t ${FULL_IMAGE_NAME} ."
-              sh "docker push ${FULL_IMAGE_NAME}"
-            }
-
+          dir("${DIR_NAME}") {
+            // REMOVED: sh "npm test"
+            sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
+            sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              if command -v trivy >/dev/null 2>&1; then
-                trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
-              else
-                echo "Warning: Trivy not found. Skipping image scan."
-              fi
+              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+              eval \$(minikube docker-env)
+              docker rmi -f ${FULL_IMAGE_NAME} || true
             """
-
-            // 🚀 NEW DEPLOYMENT STEPS (kubectl)
-            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "kubectl apply -f ${MANIFEST_FILE}"
-            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+            sh "docker build -t ${FULL_IMAGE_NAME} ."
+            sh "docker push ${FULL_IMAGE_NAME}"
           }
+
+          sh """
+            if command -v trivy >/dev/null 2>&1; then
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+            else
+              echo "Warning: Trivy not found. Skipping image scan."
+            fi
+          """
+
+          // DEPLOYMENT STEPS (kubectl)
+          sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
+          sh "kubectl apply -f ${MANIFEST_FILE}"
+          sh "kubectl rollout restart deployment ${SERVICE_NAME}"
         }
       }
     }
@@ -375,41 +330,40 @@ pipeline {
     stage('Build & Deploy: Frontend') {
       when { changeset "frontend/**" }
       steps {
-        script {
-          def SERVICE_NAME = "frontend"
-          def DIR_NAME = "frontend"
-          def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/frontend.yaml"
+        def SERVICE_NAME = "frontend"
+        def DIR_NAME = "frontend"
+        def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/frontend.yaml"
 
-          withCredentials([
-            usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
-          ]) {
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+        withCredentials([
+          usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+        ]) {
+          def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
 
-            dir("${DIR_NAME}") {
-              sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
-              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-              sh """
-                echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
-                eval \$(minikube docker-env)
-                docker rmi -f ${FULL_IMAGE_NAME} || true
-              """
-              sh "docker build -t ${FULL_IMAGE_NAME} ."
-              sh "docker push ${FULL_IMAGE_NAME}"
-            }
-
+          dir("${DIR_NAME}") {
+            // REMOVED: sh "npm test"
+            sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
+            sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              if command -v trivy >/dev/null 2>&1; then
-                trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
-              else
-                echo "Warning: Trivy not found. Skipping image scan."
-              fi
+              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
+              eval \$(minikube docker-env)
+              docker rmi -f ${FULL_IMAGE_NAME} || true
             """
-
-            // 🚀 NEW DEPLOYMENT STEPS (kubectl)
-            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-            sh "kubectl apply -f ${MANIFEST_FILE}"
-            sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+            sh "docker build -t ${FULL_IMAGE_NAME} ."
+            sh "docker push ${FULL_IMAGE_NAME}"
           }
+
+          sh """
+            if command -v trivy >/dev/null 2>&1; then
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
+            else
+              echo "Warning: Trivy not found. Skipping image scan."
+            fi
+          """
+
+          // DEPLOYMENT STEPS (kubectl)
+          sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
+          sh "kubectl apply -f ${MANIFEST_FILE}"
+          sh "kubectl rollout restart deployment ${SERVICE_NAME}"
         }
       }
     }
