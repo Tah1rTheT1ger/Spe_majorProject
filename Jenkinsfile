@@ -1,7 +1,7 @@
 /**
- * Jenkinsfile — FINAL VERSION (TESTS REMOVED)
- * * This version incorporates all previous fixes (Groovy scope, kubectl deployment, Docker cache management) 
- * but has the 'npm test' step removed from all service stages as requested.
+ * Jenkinsfile — FINAL DEPLOYABLE VERSION
+ * FIX: Variables (SERVICE_NAME, MANIFEST_FILE) are now set using 'env.' prefix 
+ * to ensure global accessibility across all steps and blocks.
  */
 pipeline {
   agent any
@@ -11,7 +11,6 @@ pipeline {
     SONAR_HOST_URL  = 'http://localhost:9000'
     SONAR_TOKEN_ID  = 'sonar-token'
 
-    // This is set to the determined SHA/Build Number in the 'Determine Tag' stage
     IMAGE_TAG       = 'latest' 
     DOCKER_HOST_FIX = 'unix:///var/run/docker.sock'
 
@@ -38,16 +37,13 @@ pipeline {
         script {
           def sha = ''
           try {
-            // Use short Git SHA for a stable, unique tag based on the commit
             sha = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
           } catch (err) {
             echo "git rev-parse failed, falling back to Jenkins Build Number"
-            // Fallback: BUILD_NUMBER is an implicit environment variable
             sha = env.BUILD_NUMBER
           }
-          // Set the global environment variable IMAGE_TAG
           env.IMAGE_TAG = sha
-          echo "Using final image tag: ${IMAGE_TAG}"
+          echo "Using final image tag: ${env.IMAGE_TAG}"
         }
       }
     }
@@ -59,18 +55,22 @@ pipeline {
     stage('Build & Deploy: Auth Service') {
       when { changeset "services/auth-service/**" }
       steps {
-        def SERVICE_NAME = "auth-service"
-        def DIR_NAME = "services/auth-service"
-        def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/auth-service.yaml"
+        script {
+          // Set service details as pipeline environment variables
+          env.SERVICE_NAME = "auth-service"
+          env.DIR_NAME = "services/auth-service"
+          env.MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/auth-service.yaml"
+        }
 
         withCredentials([
           usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
         ]) {
-          def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+          // Define FULL_IMAGE_NAME locally, using env.SERVICE_NAME
+          def FULL_IMAGE_NAME = "${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
 
-          dir("${DIR_NAME}") {
-            // REMOVED: sh "npm test" 
-            sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
+          dir("${env.DIR_NAME}") {
+            // Test step removed
+            sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
               echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
@@ -91,9 +91,9 @@ pipeline {
           """
 
           // DEPLOYMENT STEPS (kubectl)
-          sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-          sh "kubectl apply -f ${MANIFEST_FILE}"
-          sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+          sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
+          sh "kubectl apply -f ${env.MANIFEST_FILE}"
+          sh "kubectl rollout restart deployment ${env.SERVICE_NAME}"
         }
       }
     }
@@ -105,18 +105,19 @@ pipeline {
     stage('Build & Deploy: Patient Service') {
       when { changeset "services/patient-service/**" }
       steps {
-        def SERVICE_NAME = "patient-service"
-        def DIR_NAME = "services/patient-service"
-        def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/patient-service.yaml"
+        script {
+          env.SERVICE_NAME = "patient-service"
+          env.DIR_NAME = "services/patient-service"
+          env.MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/patient-service.yaml"
+        }
 
         withCredentials([
           usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
         ]) {
-          def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+          def FULL_IMAGE_NAME = "${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
 
-          dir("${DIR_NAME}") {
-            // REMOVED: sh "npm test"
-            sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
+          dir("${env.DIR_NAME}") {
+            sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
               echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
@@ -136,9 +137,9 @@ pipeline {
           """
 
           // DEPLOYMENT STEPS (kubectl)
-          sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-          sh "kubectl apply -f ${MANIFEST_FILE}"
-          sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+          sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
+          sh "kubectl apply -f ${env.MANIFEST_FILE}"
+          sh "kubectl rollout restart deployment ${env.SERVICE_NAME}"
         }
       }
     }
@@ -150,18 +151,19 @@ pipeline {
     stage('Build & Deploy: Scans Service') {
       when { changeset "services/scans-service/**" }
       steps {
-        def SERVICE_NAME = "scans-service"
-        def DIR_NAME = "services/scans-service"
-        def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/scans-service.yaml"
+        script {
+          env.SERVICE_NAME = "scans-service"
+          env.DIR_NAME = "services/scans-service"
+          env.MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/scans-service.yaml"
+        }
 
         withCredentials([
           usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
         ]) {
-          def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+          def FULL_IMAGE_NAME = "${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
 
-          dir("${DIR_NAME}") {
-            // REMOVED: sh "npm test"
-            sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
+          dir("${env.DIR_NAME}") {
+            sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
               echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
@@ -181,9 +183,9 @@ pipeline {
           """
 
           // DEPLOYMENT STEPS (kubectl)
-          sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-          sh "kubectl apply -f ${MANIFEST_FILE}"
-          sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+          sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
+          sh "kubectl apply -f ${env.MANIFEST_FILE}"
+          sh "kubectl rollout restart deployment ${env.SERVICE_NAME}"
         }
       }
     }
@@ -195,18 +197,19 @@ pipeline {
     stage('Build & Deploy: Appointment Service') {
       when { changeset "services/appointment-service/**" }
       steps {
-        def SERVICE_NAME = "appointment-service"
-        def DIR_NAME = "services/appointment-service"
-        def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/appointment-service.yaml"
+        script {
+          env.SERVICE_NAME = "appointment-service"
+          env.DIR_NAME = "services/appointment-service"
+          env.MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/appointment-service.yaml"
+        }
 
         withCredentials([
           usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
         ]) {
-          def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+          def FULL_IMAGE_NAME = "${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
 
-          dir("${DIR_NAME}") {
-            // REMOVED: sh "npm test"
-            sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
+          dir("${env.DIR_NAME}") {
+            sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
               echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
@@ -226,9 +229,9 @@ pipeline {
           """
 
           // DEPLOYMENT STEPS (kubectl)
-          sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-          sh "kubectl apply -f ${MANIFEST_FILE}"
-          sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+          sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
+          sh "kubectl apply -f ${env.MANIFEST_FILE}"
+          sh "kubectl rollout restart deployment ${env.SERVICE_NAME}"
         }
       }
     }
@@ -240,18 +243,19 @@ pipeline {
     stage('Build & Deploy: Billing Service') {
       when { changeset "services/billing-service/**" }
       steps {
-        def SERVICE_NAME = "billing-service"
-        def DIR_NAME = "services/billing-service"
-        def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/billing-service.yaml"
+        script {
+          env.SERVICE_NAME = "billing-service"
+          env.DIR_NAME = "services/billing-service"
+          env.MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/billing-service.yaml"
+        }
 
         withCredentials([
           usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
         ]) {
-          def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+          def FULL_IMAGE_NAME = "${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
 
-          dir("${DIR_NAME}") {
-            // REMOVED: sh "npm test"
-            sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
+          dir("${env.DIR_NAME}") {
+            sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
               echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
@@ -271,9 +275,9 @@ pipeline {
           """
 
           // DEPLOYMENT STEPS (kubectl)
-          sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-          sh "kubectl apply -f ${MANIFEST_FILE}"
-          sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+          sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
+          sh "kubectl apply -f ${env.MANIFEST_FILE}"
+          sh "kubectl rollout restart deployment ${env.SERVICE_NAME}"
         }
       }
     }
@@ -285,17 +289,18 @@ pipeline {
     stage('Build & Deploy: Prescription Service') {
       when { changeset "services/prescription-service/**" }
       steps {
-        def SERVICE_NAME = "prescription-service"
-        def DIR_NAME = "services/prescription-service"
-        def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/prescription-service.yaml"
+        script {
+          env.SERVICE_NAME = "prescription-service"
+          env.DIR_NAME = "services/prescription-service"
+          env.MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/prescription-service.yaml"
+        }
 
         withCredentials([
           usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
         ]) {
-          def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+          def FULL_IMAGE_NAME = "${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
 
-          dir("${DIR_NAME}") {
-            // REMOVED: sh "npm test"
+          dir("${env.DIR_NAME}") {
             sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
@@ -316,9 +321,9 @@ pipeline {
           """
 
           // DEPLOYMENT STEPS (kubectl)
-          sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-          sh "kubectl apply -f ${MANIFEST_FILE}"
-          sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+          sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
+          sh "kubectl apply -f ${env.MANIFEST_FILE}"
+          sh "kubectl rollout restart deployment ${env.SERVICE_NAME}"
         }
       }
     }
@@ -330,17 +335,18 @@ pipeline {
     stage('Build & Deploy: Frontend') {
       when { changeset "frontend/**" }
       steps {
-        def SERVICE_NAME = "frontend"
-        def DIR_NAME = "frontend"
-        def MANIFEST_FILE = "${K8S_MANIFEST_DIR}/frontend.yaml"
+        script {
+          env.SERVICE_NAME = "frontend"
+          env.DIR_NAME = "frontend"
+          env.MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/frontend.yaml"
+        }
 
         withCredentials([
           usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
         ]) {
-          def FULL_IMAGE_NAME = "${DOCKER_USER}/${SERVICE_NAME}:${IMAGE_TAG}"
+          def FULL_IMAGE_NAME = "${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
 
-          dir("${DIR_NAME}") {
-            // REMOVED: sh "npm test"
+          dir("frontend") {
             sh "export DOCKER_HOST='${DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
@@ -361,9 +367,9 @@ pipeline {
           """
 
           // DEPLOYMENT STEPS (kubectl)
-          sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${IMAGE_TAG}|g' ${MANIFEST_FILE}"
-          sh "kubectl apply -f ${MANIFEST_FILE}"
-          sh "kubectl rollout restart deployment ${SERVICE_NAME}"
+          sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
+          sh "kubectl apply -f ${env.MANIFEST_FILE}"
+          sh "kubectl rollout restart deployment ${env.SERVICE_NAME}"
         }
       }
     }
@@ -372,7 +378,7 @@ pipeline {
 
   post {
     success {
-      echo "✅ Pipeline completed successfully. Images pushed with tag ${IMAGE_TAG}."
+      echo "✅ Pipeline completed successfully. Images pushed with tag ${env.IMAGE_TAG}."
     }
     failure {
       echo "❌ Pipeline failed. Check logs."
