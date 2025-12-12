@@ -1,7 +1,7 @@
 /**
- * Jenkinsfile — FINAL DEPLOYABLE VERSION (CLEANED SCOPE)
- * FIX: Wrapped all local 'def FULL_IMAGE_NAME' definitions inside a 'script' block 
- * within the 'withCredentials' block to resolve the last compilation error.
+ * Jenkinsfile — FINAL DEPLOYABLE VERSION (LAST SCOPE FIX)
+ * FIX: Replaced 'def FULL_IMAGE_NAME' inside withCredentials with a nested 'withEnv' block 
+ * to correctly define the variable as an executable step, resolving the persistent compilation errors.
  */
 pipeline {
   agent any
@@ -64,36 +64,35 @@ pipeline {
         withCredentials([
           usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
         ]) {
-          // FIX: Wrapped def in script block
-          script {
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME // Export for shell access
-          }
+          // FIX: Use withEnv to define the complex image name as a legal step
+          withEnv(["FULL_IMAGE_NAME=${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"]) {
 
-          dir("${env.DIR_NAME}") {
-            sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
-            sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+            dir("${env.DIR_NAME}") {
+              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+              sh """
+                echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
+                eval \$(minikube docker-env)
+                docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              """
+              sh "docker build -t ${env.FULL_IMAGE_NAME} ."
+              sh "docker push ${env.FULL_IMAGE_NAME}"
+            }
+
+            // Trivy
             sh """
-              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
-              eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              if command -v trivy >/dev/null 2>&1; then
+                trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
+              else
+                echo "Warning: Trivy not found. Skipping image scan."
+              fi
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+
+            // DEPLOYMENT STEPS (kubectl)
+            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
+            sh "kubectl apply -f ${env.MANIFEST_FILE}"
+            sh "kubectl rollout restart deployment ${env.SERVICE_NAME}"
           }
-
-          // Trivy
-          sh """
-            if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
-            else
-              echo "Warning: Trivy not found. Skipping image scan."
-            fi
-          """
-
-          // DEPLOYMENT STEPS (Ansible integration)
-          sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
-          sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${env.MANIFEST_FILE} service_name=${env.SERVICE_NAME}\""
         }
       }
     }
@@ -114,35 +113,33 @@ pipeline {
         withCredentials([
           usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
         ]) {
-          // FIX: Wrapped def in script block
-          script {
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME // Export for shell access
-          }
+          withEnv(["FULL_IMAGE_NAME=${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"]) {
+          
+            dir("${env.DIR_NAME}") {
+              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+              sh """
+                echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
+                eval \$(minikube docker-env)
+                docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              """
+              sh "docker build -t ${env.FULL_IMAGE_NAME} ."
+              sh "docker push ${env.FULL_IMAGE_NAME}"
+            }
 
-          dir("${env.DIR_NAME}") {
-            sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
-            sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
-              eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              if command -v trivy >/dev/null 2>&1; then
+                trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
+              else
+                echo "Warning: Trivy not found. Skipping image scan."
+              fi
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+
+            // DEPLOYMENT STEPS (kubectl)
+            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
+            sh "kubectl apply -f ${env.MANIFEST_FILE}"
+            sh "kubectl rollout restart deployment ${env.SERVICE_NAME}"
           }
-
-          sh """
-            if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
-            else
-              echo "Warning: Trivy not found. Skipping image scan."
-            fi
-          """
-
-          // DEPLOYMENT STEPS (Ansible integration)
-          sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
-          sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${env.MANIFEST_FILE} service_name=${env.SERVICE_NAME}\""
         }
       }
     }
@@ -163,35 +160,33 @@ pipeline {
         withCredentials([
           usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
         ]) {
-          // FIX: Wrapped def in script block
-          script {
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME // Export for shell access
-          }
+          withEnv(["FULL_IMAGE_NAME=${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"]) {
+            
+            dir("${env.DIR_NAME}") {
+              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+              sh """
+                echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
+                eval \$(minikube docker-env)
+                docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              """
+              sh "docker build -t ${env.FULL_IMAGE_NAME} ."
+              sh "docker push ${env.FULL_IMAGE_NAME}"
+            }
 
-          dir("${env.DIR_NAME}") {
-            sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
-            sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
-              eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              if command -v trivy >/dev/null 2>&1; then
+                trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
+              else
+                echo "Warning: Trivy not found. Skipping image scan."
+              fi
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+
+            // DEPLOYMENT STEPS (kubectl)
+            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
+            sh "kubectl apply -f ${env.MANIFEST_FILE}"
+            sh "kubectl rollout restart deployment ${env.SERVICE_NAME}"
           }
-
-          sh """
-            if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
-            else
-              echo "Warning: Trivy not found. Skipping image scan."
-            fi
-          """
-
-          // DEPLOYMENT STEPS (Ansible integration)
-          sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
-          sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${env.MANIFEST_FILE} service_name=${env.SERVICE_NAME}\""
         }
       }
     }
@@ -212,35 +207,33 @@ pipeline {
         withCredentials([
           usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
         ]) {
-          // FIX: Wrapped def in script block
-          script {
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME // Export for shell access
-          }
+          withEnv(["FULL_IMAGE_NAME=${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"]) {
 
-          dir("${env.DIR_NAME}") {
-            sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
-            sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+            dir("${env.DIR_NAME}") {
+              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+              sh """
+                echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
+                eval \$(minikube docker-env)
+                docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              """
+              sh "docker build -t ${env.FULL_IMAGE_NAME} ."
+              sh "docker push ${env.FULL_IMAGE_NAME}"
+            }
+
             sh """
-              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
-              eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              if command -v trivy >/dev/null 2>&1; then
+                trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
+              else
+                echo "Warning: Trivy not found. Skipping image scan."
+              fi
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+
+            // DEPLOYMENT STEPS (kubectl)
+            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
+            sh "kubectl apply -f ${env.MANIFEST_FILE}"
+            sh "kubectl rollout restart deployment ${env.SERVICE_NAME}"
           }
-
-          sh """
-            if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
-            else
-              echo "Warning: Trivy not found. Skipping image scan."
-            fi
-          """
-
-          // DEPLOYMENT STEPS (Ansible integration)
-          sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
-          sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${env.MANIFEST_FILE} service_name=${env.SERVICE_NAME}\""
         }
       }
     }
@@ -261,35 +254,33 @@ pipeline {
         withCredentials([
           usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
         ]) {
-          // FIX: Wrapped def in script block
-          script {
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME // Export for shell access
-          }
+          withEnv(["FULL_IMAGE_NAME=${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"]) {
 
-          dir("${env.DIR_NAME}") {
-            sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
-            sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+            dir("${env.DIR_NAME}") {
+              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+              sh """
+                echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
+                eval \$(minikube docker-env)
+                docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              """
+              sh "docker build -t ${env.FULL_IMAGE_NAME} ."
+              sh "docker push ${env.FULL_IMAGE_NAME}"
+            }
+
             sh """
-              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
-              eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              if command -v trivy >/dev/null 2>&1; then
+                trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
+              else
+                echo "Warning: Trivy not found. Skipping image scan."
+              fi
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+
+            // DEPLOYMENT STEPS (kubectl)
+            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
+            sh "kubectl apply -f ${env.MANIFEST_FILE}"
+            sh "kubectl rollout restart deployment ${env.SERVICE_NAME}"
           }
-
-          sh """
-            if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
-            else
-              echo "Warning: Trivy not found. Skipping image scan."
-            fi
-          """
-
-          // DEPLOYMENT STEPS (Ansible integration)
-          sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
-          sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${env.MANIFEST_FILE} service_name=${env.SERVICE_NAME}\""
         }
       }
     }
@@ -310,35 +301,33 @@ pipeline {
         withCredentials([
           usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
         ]) {
-          // FIX: Wrapped def in script block
-          script {
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME // Export for shell access
-          }
+          withEnv(["FULL_IMAGE_NAME=${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"]) {
 
-          dir("${env.DIR_NAME}") {
-            sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
-            sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+            dir("${env.DIR_NAME}") {
+              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+              sh """
+                echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
+                eval \$(minikube docker-env)
+                docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              """
+              sh "docker build -t ${env.FULL_IMAGE_NAME} ."
+              sh "docker push ${FULL_IMAGE_NAME}"
+            }
+
             sh """
-              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
-              eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              if command -v trivy >/dev/null 2>&1; then
+                trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
+              else
+                echo "Warning: Trivy not found. Skipping image scan."
+              fi
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+
+            // DEPLOYMENT STEPS (kubectl)
+            sh "sed -i 's|${K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
+            sh "kubectl apply -f ${env.MANIFEST_FILE}"
+            sh "kubectl rollout restart deployment ${env.SERVICE_NAME}"
           }
-
-          sh """
-            if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
-            else
-              echo "Warning: Trivy not found. Skipping image scan."
-            fi
-          """
-
-          // DEPLOYMENT STEPS (Ansible integration)
-          sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
-          sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${env.MANIFEST_FILE} service_name=${env.SERVICE_NAME}\""
         }
       }
     }
@@ -351,48 +340,41 @@ pipeline {
       when { changeset "frontend/**" }
       steps {
         script {
-          // Set pipeline environment variables (this block is correct)
           env.SERVICE_NAME = "frontend"
           env.DIR_NAME = "frontend"
           env.MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/frontend.yaml"
-          env.MANIFEST_ABS_PATH = sh(script: "pwd", returnStdout: true).trim() + "/${env.MANIFEST_FILE}"
         }
 
         withCredentials([
           usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
         ]) {
-          // NOTE: The conflicting 'def FULL_IMAGE_NAME' line has been REMOVED here.
+          withEnv(["FULL_IMAGE_NAME=${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"]) {
 
-          dir("${env.DIR_NAME}") {
-            // FIX: Define FULL_IMAGE_NAME as a shell variable in an executable script block
-            script {
-                def FULL_IMAGE_NAME = "${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-                env.FULL_IMAGE_NAME = FULL_IMAGE_NAME // Export for shell access outside this block
+            dir("frontend") {
+              sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
+              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+              sh """
+                echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
+                eval \$(minikube docker-env)
+                docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              """
+              sh "docker build -t ${env.FULL_IMAGE_NAME} ."
+              sh "docker push ${env.FULL_IMAGE_NAME}"
             }
-            
-            sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
-            sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+
             sh """
-              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
-              eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              if command -v trivy >/dev/null 2>&1; then
+                trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
+              else
+                echo "Warning: Trivy not found. Skipping image scan."
+              fi
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+
+            // DEPLOYMENT STEPS (kubectl)
+            sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
+            sh "kubectl apply -f ${env.MANIFEST_FILE}"
+            sh "kubectl rollout restart deployment ${env.SERVICE_NAME}"
           }
-
-          // Trivy
-          sh """
-            if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
-            else
-              echo "Warning: Trivy not found. Skipping image scan."
-            fi
-          """
-
-          // DEPLOYMENT STEPS (Ansible Integration)
-          sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_ABS_PATH}"
-          sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${env.MANIFEST_ABS_PATH} service_name=${env.SERVICE_NAME}\""
         }
       }
     }
