@@ -33,7 +33,7 @@ export default function Register() {
         <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
           <option value="patient">Patient</option>
           <option value="doctor">Doctor</option>
-          <option value="desk">Desk bench atleast jhgdfasjhafdsbdfslj time ansible time</option>
+          <option value="desk">Desk bench atleast once again time ansible time</option>
         </select>
         <button type="submit">Register</button>
         <p style={{ marginTop: 10 }}>

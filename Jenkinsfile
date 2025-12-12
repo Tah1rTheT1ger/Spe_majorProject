@@ -1,16 +1,14 @@
 /**
- * Jenkinsfile — FINAL DEPLOYABLE VERSION (VAULT INTEGRATION & FULL COMPILATION FIX)
- * * This version applies the FINAL 'script { def ... }' wrapper to resolve the 'Expected a step' error 
- * within the 'withVault' block across ALL stages.
+ * Jenkinsfile — FINAL DEPLOYABLE VERSION (VAULT INTEGRATION & FINAL SYNTAX FIX)
+ * * This version removes the conflicting 'credentialsId' parameter from the secret list, 
+ * relying on the successful Global Jenkins configuration.
  */
 pipeline {
   agent any
 
   environment {
-    // VAULT CONFIGURATION VARIABLES
-    VAULT_ROLE_ID = 'dcc579e4-a0f2-4de1-3aef-0a453b320860' 
-    VAULT_SECRET_ID_CREDS = 'full-vault-approle-config' // ID of the Jenkins Credential
-    VAULT_URL = "http://vault-service.default.svc.cluster.local:8200" 
+    // These variables are now only used for the Groovy context (no longer passed as params)
+    VAULT_SECRET_ID_CREDS = 'full-vault-approle-config' 
     
     // Other Environment Variables
     SONAR_HOST_URL  = 'http://localhost:9000'
@@ -65,6 +63,7 @@ pipeline {
           env.MANIFEST_ABS_PATH = sh(script: "pwd", returnStdout: true).trim() + "/${env.MANIFEST_FILE}"
         }
 
+        // 🎯 FIX: Relying on GLOBAL VAULT CONFIGURATION 🎯
         withVault([
             vaultSecrets: [ 
                 [
@@ -72,16 +71,15 @@ pipeline {
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ],
-                    credentialsId: env.VAULT_SECRET_ID_CREDS
+                    ]
+                    // Removed: credentialsId: env.VAULT_SECRET_ID_CREDS
                 ]
             ]
         ]) {
           
-          // 🎯 FINAL FIX APPLIED HERE 🎯
           script {
             def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME // Export to environment for shell access
+            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME 
           }
 
           dir("${env.DIR_NAME}") {
@@ -132,13 +130,11 @@ pipeline {
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ],
-                    credentialsId: env.VAULT_SECRET_ID_CREDS
+                    ]
                 ]
             ]
         ]) {
           
-          // 🎯 FINAL FIX APPLIED HERE 🎯
           script {
             def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
             env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
@@ -192,13 +188,11 @@ pipeline {
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ],
-                    credentialsId: env.VAULT_SECRET_ID_CREDS
+                    ]
                 ]
             ]
         ]) {
           
-          // 🎯 FINAL FIX APPLIED HERE 🎯
           script {
             def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
             env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
@@ -252,13 +246,11 @@ pipeline {
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ],
-                    credentialsId: env.VAULT_SECRET_ID_CREDS
+                    ]
                 ]
             ]
         ]) {
           
-          // 🎯 FINAL FIX APPLIED HERE 🎯
           script {
             def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
             env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
@@ -312,13 +304,11 @@ pipeline {
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ],
-                    credentialsId: env.VAULT_SECRET_ID_CREDS
+                    ]
                 ]
             ]
         ]) {
           
-          // 🎯 FINAL FIX APPLIED HERE 🎯
           script {
             def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
             env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
@@ -372,13 +362,11 @@ pipeline {
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ],
-                    credentialsId: env.VAULT_SECRET_ID_CREDS
+                    ]
                 ]
             ]
         ]) {
           
-          // 🎯 FINAL FIX APPLIED HERE 🎯
           script {
             def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
             env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
@@ -432,13 +420,11 @@ pipeline {
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ],
-                    credentialsId: env.VAULT_SECRET_ID_CREDS
+                    ]
                 ]
             ]
         ]) {
           
-          // 🎯 FINAL FIX APPLIED HERE 🎯
           script {
             def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
             env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
