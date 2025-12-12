@@ -351,43 +351,52 @@ pipeline {
       when { changeset "frontend/**" }
       steps {
         script {
+          // 1. Define service parameters as environment variables
           env.SERVICE_NAME = "frontend"
           env.DIR_NAME = "frontend"
           env.MANIFEST_FILE = "${env.K8S_MANIFEST_DIR}/frontend.yaml"
+          
+          // 2. GET THE ABSOLUTE PATH (CRITICAL FIX)
+          // This ensures Ansible/kubectl can find the file regardless of the execution context.
+          env.MANIFEST_ABS_PATH = sh(script: "pwd", returnStdout: true).trim() + "/${env.MANIFEST_FILE}"
         }
 
         withCredentials([
           usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
         ]) {
-          // FIX: Wrapped def in script block
-          script {
-            def FULL_IMAGE_NAME = "${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME // Export for shell access
-          }
+          // Define FULL_IMAGE_NAME locally inside the credentials scope
+          def FULL_IMAGE_NAME = "${DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
 
-          dir("frontend") {
+          dir("${env.DIR_NAME}") {
+            // Run Tests (Optional: remove this if you don't want tests)
+            sh "npm test" 
+
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
+              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              docker rmi -f ${FULL_IMAGE_NAME} || true
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+            sh "docker build -t ${FULL_IMAGE_NAME} ."
+            sh "docker push ${FULL_IMAGE_NAME}"
           }
 
+          // Trivy
           sh """
             if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
             else
               echo "Warning: Trivy not found. Skipping image scan."
             fi
           """
 
-          // DEPLOYMENT STEPS (Ansible integration)
-          sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_FILE}"
-          sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${env.MANIFEST_FILE} service_name=${env.SERVICE_NAME}\""
+          // DEPLOYMENT STEPS (Ansible Integration)
+          // 1. Replace placeholder using the ABSOLUTE PATH
+          sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_ABS_PATH}"
+          
+          // 2. Use Ansible, passing the ABSOLUTE PATH in the extra variable 'manifest_file'
+          sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${env.MANIFEST_ABS_PATH} service_name=${env.SERVICE_NAME}\""
         }
       }
     }
