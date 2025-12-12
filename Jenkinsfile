@@ -1,15 +1,14 @@
 /**
- * Jenkinsfile — FINAL DEPLOYABLE VERSION (VAULT INTEGRATION & PARAMETER FIX)
- * * This version corrects the 'secrets' parameter name to 'vaultSecrets' as required by the Jenkins Vault Plugin.
+ * Jenkinsfile — FINAL DEPLOYABLE VERSION (VAULT INTEGRATION COMPLETE)
+ * * This version uses the single 'full-vault-approle-config' credential ID 
+ * to securely access Docker PAT from HashiCorp Vault across all service stages.
  */
 pipeline {
   agent any
 
   environment {
-    // VAULT CONFIGURATION VARIABLES
-    VAULT_ROLE_ID = 'dcc579e4-a0f2-4de1-3aef-0a453b320860' 
-    VAULT_SECRET_ID_CREDS = 'vault-approle-secret-id'
-    VAULT_URL = "http://vault-service.default.svc.cluster.local:8200" 
+    // These variables are now purely descriptive, Vault handles authentication details
+    VAULT_SECRET_ID_CREDS = 'full-vault-approle-config' 
     
     // Other Environment Variables
     SONAR_HOST_URL  = 'http://localhost:9000'
@@ -64,46 +63,38 @@ pipeline {
           env.MANIFEST_ABS_PATH = sh(script: "pwd", returnStdout: true).trim() + "/${env.MANIFEST_FILE}"
         }
 
+        // 🎯 VAULT INTEGRATION: Reference the single combined credential ID 🎯
         withVault([
-            configuration: [
-                vaultUrl: env.VAULT_URL,
-                appRoleCredentialsId: env.VAULT_SECRET_ID_CREDS,
-                appRoleName: 'jenkins-ci-role', 
-                roleId: env.VAULT_ROLE_ID
-            ],
-            // 🎯 FIX APPLIED HERE 🎯
             vaultSecrets: [ 
                 [
                     path: 'secret/jenkins/docker', 
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ]
+                    ],
+                    credentialsId: env.VAULT_SECRET_ID_CREDS // Uses 'full-vault-approle-config'
                 ]
             ]
         ]) {
           
-          script {
-            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
-          }
+          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
 
           dir("${env.DIR_NAME}") {
             sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
+              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              docker rmi -f ${FULL_IMAGE_NAME} || true
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+            sh "docker build -t ${FULL_IMAGE_NAME} ."
+            sh "docker push ${FULL_IMAGE_NAME}"
           }
 
           sh """
             if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
             else
               echo "Warning: Trivy not found. Skipping image scan."
             fi
@@ -130,45 +121,36 @@ pipeline {
         }
 
         withVault([
-            configuration: [
-                vaultUrl: env.VAULT_URL,
-                appRoleCredentialsId: env.VAULT_SECRET_ID_CREDS,
-                appRoleName: 'jenkins-ci-role', 
-                roleId: env.VAULT_ROLE_ID
-            ],
-            // 🎯 FIX APPLIED HERE 🎯
             vaultSecrets: [ 
                 [
                     path: 'secret/jenkins/docker', 
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ]
+                    ],
+                    credentialsId: env.VAULT_SECRET_ID_CREDS
                 ]
             ]
         ]) {
           
-          script {
-            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
-          }
+          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
 
           dir("${env.DIR_NAME}") {
             sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
+              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              docker rmi -f ${FULL_IMAGE_NAME} || true
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+            sh "docker build -t ${FULL_IMAGE_NAME} ."
+            sh "docker push ${FULL_IMAGE_NAME}"
           }
 
           sh """
             if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
             else
               echo "Warning: Trivy not found. Skipping image scan."
             fi
@@ -195,45 +177,36 @@ pipeline {
         }
 
         withVault([
-            configuration: [
-                vaultUrl: env.VAULT_URL,
-                appRoleCredentialsId: env.VAULT_SECRET_ID_CREDS,
-                appRoleName: 'jenkins-ci-role', 
-                roleId: env.VAULT_ROLE_ID
-            ],
-            // 🎯 FIX APPLIED HERE 🎯
             vaultSecrets: [ 
                 [
                     path: 'secret/jenkins/docker', 
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ]
+                    ],
+                    credentialsId: env.VAULT_SECRET_ID_CREDS
                 ]
             ]
         ]) {
           
-          script {
-            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
-          }
+          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
 
           dir("${env.DIR_NAME}") {
             sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
+              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              docker rmi -f ${FULL_IMAGE_NAME} || true
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+            sh "docker build -t ${FULL_IMAGE_NAME} ."
+            sh "docker push ${FULL_IMAGE_NAME}"
           }
 
           sh """
             if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
             else
               echo "Warning: Trivy not found. Skipping image scan."
             fi
@@ -260,45 +233,36 @@ pipeline {
         }
 
         withVault([
-            configuration: [
-                vaultUrl: env.VAULT_URL,
-                appRoleCredentialsId: env.VAULT_SECRET_ID_CREDS,
-                appRoleName: 'jenkins-ci-role', 
-                roleId: env.VAULT_ROLE_ID
-            ],
-            // 🎯 FIX APPLIED HERE 🎯
             vaultSecrets: [ 
                 [
                     path: 'secret/jenkins/docker', 
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ]
+                    ],
+                    credentialsId: env.VAULT_SECRET_ID_CREDS
                 ]
             ]
         ]) {
           
-          script {
-            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
-          }
+          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
 
           dir("${env.DIR_NAME}") {
             sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
+              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              docker rmi -f ${FULL_IMAGE_NAME} || true
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+            sh "docker build -t ${FULL_IMAGE_NAME} ."
+            sh "docker push ${FULL_IMAGE_NAME}"
           }
 
           sh """
             if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
             else
               echo "Warning: Trivy not found. Skipping image scan."
             fi
@@ -325,45 +289,36 @@ pipeline {
         }
 
         withVault([
-            configuration: [
-                vaultUrl: env.VAULT_URL,
-                appRoleCredentialsId: env.VAULT_SECRET_ID_CREDS,
-                appRoleName: 'jenkins-ci-role', 
-                roleId: env.VAULT_ROLE_ID
-            ],
-            // 🎯 FIX APPLIED HERE 🎯
             vaultSecrets: [ 
                 [
                     path: 'secret/jenkins/docker', 
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ]
+                    ],
+                    credentialsId: env.VAULT_SECRET_ID_CREDS
                 ]
             ]
         ]) {
           
-          script {
-            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
-          }
+          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
 
           dir("${env.DIR_NAME}") {
             sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
+              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              docker rmi -f ${FULL_IMAGE_NAME} || true
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+            sh "docker build -t ${FULL_IMAGE_NAME} ."
+            sh "docker push ${FULL_IMAGE_NAME}"
           }
 
           sh """
             if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
             else
               echo "Warning: Trivy not found. Skipping image scan."
             fi
@@ -390,45 +345,36 @@ pipeline {
         }
 
         withVault([
-            configuration: [
-                vaultUrl: env.VAULT_URL,
-                appRoleCredentialsId: env.VAULT_SECRET_ID_CREDS,
-                appRoleName: 'jenkins-ci-role', 
-                roleId: env.VAULT_ROLE_ID
-            ],
-            // 🎯 FIX APPLIED HERE 🎯
             vaultSecrets: [ 
                 [
                     path: 'secret/jenkins/docker', 
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ]
+                    ],
+                    credentialsId: env.VAULT_SECRET_ID_CREDS
                 ]
             ]
         ]) {
           
-          script {
-            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
-          }
+          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
 
           dir("${env.DIR_NAME}") {
             sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
+              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              docker rmi -f ${FULL_IMAGE_NAME} || true
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+            sh "docker build -t ${FULL_IMAGE_NAME} ."
+            sh "docker push ${FULL_IMAGE_NAME}"
           }
 
           sh """
             if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
             else
               echo "Warning: Trivy not found. Skipping image scan."
             fi
@@ -455,45 +401,36 @@ pipeline {
         }
 
         withVault([
-            configuration: [
-                vaultUrl: env.VAULT_URL,
-                appRoleCredentialsId: env.VAULT_SECRET_ID_CREDS,
-                appRoleName: 'jenkins-ci-role', 
-                roleId: env.VAULT_ROLE_ID
-            ],
-            // 🎯 FIX APPLIED HERE 🎯
             vaultSecrets: [ 
                 [
                     path: 'secret/jenkins/docker', 
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
-                    ]
+                    ],
+                    credentialsId: env.VAULT_SECRET_ID_CREDS
                 ]
             ]
         ]) {
           
-          script {
-            def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
-            env.FULL_IMAGE_NAME = FULL_IMAGE_NAME
-          }
+          def FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
 
-          dir("frontend") {
+          dir("${env.DIR_NAME}") {
             sh "npm test"
             sh "export DOCKER_HOST='${env.DOCKER_HOST_FIX}'"
             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
             sh """
-              echo "Attempting to remove stale image ${env.FULL_IMAGE_NAME} from Minikube cache..."
+              echo "Attempting to remove stale image ${FULL_IMAGE_NAME} from Minikube cache..."
               eval \$(minikube docker-env)
-              docker rmi -f ${env.FULL_IMAGE_NAME} || true
+              docker rmi -f ${FULL_IMAGE_NAME} || true
             """
-            sh "docker build -t ${env.FULL_IMAGE_NAME} ."
-            sh "docker push ${env.FULL_IMAGE_NAME}"
+            sh "docker build -t ${FULL_IMAGE_NAME} ."
+            sh "docker push ${FULL_IMAGE_NAME}"
           }
 
           sh """
             if command -v trivy >/dev/null 2>&1; then
-              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
+              trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${FULL_IMAGE_NAME} || true
             else
               echo "Warning: Trivy not found. Skipping image scan."
             fi
