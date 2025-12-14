@@ -6,7 +6,7 @@ export default function PatientForm({ initial = {}, onSubmit, submitLabel = 'Sav
     lastName: initial.lastName || '',
     username: initial.username || '',
     password: initial.password || '',
-    dob: initial.dob ? initial.dob.slice(0,10) : '',
+    dob: initial.dob ? initial.dob.slice(0, 10) : '',
     gender: initial.gender || 'male',
     phone: initial?.contact?.phone || '',
     email: initial?.contact?.email || '',
@@ -33,7 +33,7 @@ export default function PatientForm({ initial = {}, onSubmit, submitLabel = 'Sav
     <form onSubmit={submit} style={{ display: 'grid', gap: 8, maxWidth: 480 }}>
       <div style={{ display: 'flex', gap: 8 }}>
         <input name="firstName" value={form.firstName} onChange={handleChange} placeholder="First name" required />
-        <input name.="lastName" value={form.lastName} onChange={handleChange} placeholder="Last name" />
+        <input name="lastName" value={form.lastName} onChange={handleChange} placeholder="Last name" />
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         <input name="username" value={form.username} onChange={handleChange} placeholder="Username" required />
