@@ -74,7 +74,7 @@ pipeline {
                             // Vault secrets
                             withVault([
                                 vaultSecrets: [[
-                                    path: 'secret/data/jenkins/docker',
+                                    path: 'secret/jenkins/docker',
                                     engineVersion: 2,
                                     secretValues: [
                                         [vaultKey: 'username', envVar: 'DOCKER_USER_RAW'],
