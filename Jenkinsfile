@@ -1,6 +1,6 @@
 /**
  * Jenkinsfile — FINAL DEFINITIVE VERSION (KV v2 PATH FIX)
- * * Corrected the Vault path to 'secret/metadata/jenkins/docker' for KV v2 compatibility.
+ * * Corrected the Vault path to 'secret/data/jenkins/docker' for KV v2 compatibility.
  */
 pipeline {
   agent any
@@ -47,8 +47,8 @@ pipeline {
         withVault([
             vaultSecrets: [ 
                 [
-                    // 🎯 FIX: ADDED /metadata/ for KV v2 🎯
-                    path: 'secret/metadata/jenkins/docker', 
+                    // 🎯 FIX: ADDED /data/ for KV v2 🎯
+                    path: 'secret/data/jenkins/docker', 
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER_RAW'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
@@ -107,8 +107,8 @@ pipeline {
         withVault([
             vaultSecrets: [ 
                 [
-                    // 🎯 FIX: ADDED /metadata/ for KV v2 🎯
-                    path: 'secret/metadata/jenkins/docker', 
+                    // 🎯 FIX: ADDED /data/ for KV v2 🎯
+                    path: 'secret/data/jenkins/docker', 
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER_RAW'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
@@ -167,8 +167,8 @@ pipeline {
         withVault([
             vaultSecrets: [ 
                 [
-                    // 🎯 FIX: ADDED /metadata/ for KV v2 🎯
-                    path: 'secret/metadata/jenkins/docker', 
+                    // 🎯 FIX: ADDED /data/ for KV v2 🎯
+                    path: 'secret/data/jenkins/docker', 
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER_RAW'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
@@ -227,8 +227,8 @@ pipeline {
         withVault([
             vaultSecrets: [ 
                 [
-                    // 🎯 FIX: ADDED /metadata/ for KV v2 🎯
-                    path: 'secret/metadata/jenkins/docker', 
+                    // 🎯 FIX: ADDED /data/ for KV v2 🎯
+                    path: 'secret/data/jenkins/docker', 
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER_RAW'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
@@ -287,8 +287,8 @@ pipeline {
         withVault([
             vaultSecrets: [ 
                 [
-                    // 🎯 FIX: ADDED /metadata/ for KV v2 🎯
-                    path: 'secret/metadata/jenkins/docker', 
+                    // 🎯 FIX: ADDED /data/ for KV v2 🎯
+                    path: 'secret/data/jenkins/docker', 
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER_RAW'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
@@ -347,8 +347,8 @@ pipeline {
         withVault([
             vaultSecrets: [ 
                 [
-                    // 🎯 FIX: ADDED /metadata/ for KV v2 🎯
-                    path: 'secret/metadata/jenkins/docker', 
+                    // 🎯 FIX: ADDED /data/ for KV v2 🎯
+                    path: 'secret/data/jenkins/docker', 
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER_RAW'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
@@ -407,8 +407,8 @@ pipeline {
         withVault([
             vaultSecrets: [ 
                 [
-                    // 🎯 FIX: ADDED /metadata/ for KV v2 🎯
-                    path: 'secret/metadata/jenkins/docker', 
+                    // 🎯 FIX: ADDED /data/ for KV v2 🎯
+                    path: 'secret/data/jenkins/docker', 
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER_RAW'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
