@@ -1,7 +1,6 @@
 /**
- * Jenkinsfile — FINAL DEFINITIVE VERSION (COMPLETE STABILITY)
- * * Applies .trim() to ensure DOCKER_USER from Vault has no trailing newlines/spaces, 
- * * fixing the docker rmi/build command error.
+ * Jenkinsfile — FINAL DEFINITIVE VERSION (KV v2 PATH FIX)
+ * * Corrected the Vault path to 'secret/data/jenkins/docker' for KV v2 compatibility.
  */
 pipeline {
   agent any
@@ -28,10 +27,11 @@ pipeline {
   }
 
   stages {
-    // ... (Checkout and Determine Tag stages are correct) ...
+
+    // ... (All initial stages are correct) ...
 
     /* ----------------------------------------------------------
-        AUTH SERVICE (Example structure)
+        AUTH SERVICE 
     -----------------------------------------------------------*/
 
     stage('Build & Deploy: Auth Service') {
@@ -47,9 +47,10 @@ pipeline {
         withVault([
             vaultSecrets: [ 
                 [
-                    path: 'secret/jenkins/docker', 
+                    // 🎯 FIX: ADDED /data/ for KV v2 🎯
+                    path: 'secret/data/jenkins/docker', 
                     secretValues: [
-                        [vaultKey: 'username', envVar: 'DOCKER_USER_RAW'], // Fetch as RAW
+                        [vaultKey: 'username', envVar: 'DOCKER_USER_RAW'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
                     ],
                     credentialsId: env.VAULT_SECRET_ID_CREDS
@@ -58,7 +59,6 @@ pipeline {
         ]) {
           
           script {
-            // CRITICAL FIX: Trim the username which may contain a newline/space from Vault
             env.DOCKER_USER = env.DOCKER_USER_RAW.trim()
             env.FULL_IMAGE_NAME = "${env.DOCKER_USER}/${env.SERVICE_NAME}:${env.IMAGE_TAG}"
           }
@@ -75,7 +75,7 @@ pipeline {
             sh "docker build -t \$FULL_IMAGE_NAME ."
             sh "docker push \$FULL_IMAGE_NAME"
           }
-          // ... (Rest of Trivy and Ansible steps use env.FULL_IMAGE_NAME)
+
           sh """
             if command -v trivy >/dev/null 2>&1; then
               trivy image --severity HIGH,CRITICAL --no-progress --exit-code 0 ${env.FULL_IMAGE_NAME} || true
@@ -83,6 +83,7 @@ pipeline {
               echo "Warning: Trivy not found. Skipping image scan."
             fi
           """
+
           sh "sed -i 's|${env.K8S_IMAGE_PLACEHOLDER}|${env.IMAGE_TAG}|g' ${env.MANIFEST_ABS_PATH}"
           sh "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -e \"manifest_file=${env.MANIFEST_ABS_PATH} service_name=${env.SERVICE_NAME}\""
         }
@@ -106,7 +107,8 @@ pipeline {
         withVault([
             vaultSecrets: [ 
                 [
-                    path: 'secret/jenkins/docker', 
+                    // 🎯 FIX: ADDED /data/ for KV v2 🎯
+                    path: 'secret/data/jenkins/docker', 
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER_RAW'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
@@ -165,7 +167,8 @@ pipeline {
         withVault([
             vaultSecrets: [ 
                 [
-                    path: 'secret/jenkins/docker', 
+                    // 🎯 FIX: ADDED /data/ for KV v2 🎯
+                    path: 'secret/data/jenkins/docker', 
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER_RAW'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
@@ -224,7 +227,8 @@ pipeline {
         withVault([
             vaultSecrets: [ 
                 [
-                    path: 'secret/jenkins/docker', 
+                    // 🎯 FIX: ADDED /data/ for KV v2 🎯
+                    path: 'secret/data/jenkins/docker', 
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER_RAW'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
@@ -283,7 +287,8 @@ pipeline {
         withVault([
             vaultSecrets: [ 
                 [
-                    path: 'secret/jenkins/docker', 
+                    // 🎯 FIX: ADDED /data/ for KV v2 🎯
+                    path: 'secret/data/jenkins/docker', 
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER_RAW'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
@@ -342,7 +347,8 @@ pipeline {
         withVault([
             vaultSecrets: [ 
                 [
-                    path: 'secret/jenkins/docker', 
+                    // 🎯 FIX: ADDED /data/ for KV v2 🎯
+                    path: 'secret/data/jenkins/docker', 
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER_RAW'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
@@ -385,7 +391,7 @@ pipeline {
     }
 
     /* ----------------------------------------------------------
-        FRONTEND (NO npm test)
+        FRONTEND
     -----------------------------------------------------------*/
 
     stage('Build & Deploy: Frontend') {
@@ -401,7 +407,8 @@ pipeline {
         withVault([
             vaultSecrets: [ 
                 [
-                    path: 'secret/jenkins/docker', 
+                    // 🎯 FIX: ADDED /data/ for KV v2 🎯
+                    path: 'secret/data/jenkins/docker', 
                     secretValues: [
                         [vaultKey: 'username', envVar: 'DOCKER_USER_RAW'],
                         [vaultKey: 'password', envVar: 'DOCKER_PASS']
