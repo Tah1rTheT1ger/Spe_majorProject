@@ -4,13 +4,13 @@
 # NOTE: The local port can be the same as the cluster port if it's not in use.
 
 SERVICE_MAP=(
-    "auth-service:4000:8081"
-    "patient-service:4100:8082"
-    "scans-service:4200:8083"
-    "appointment-service:4300:8084"
-    "billing-service:4400:8085"
-    "prescription-service:4500:8086"
-    "vault-service:8200:8200"    # Crucial for Jenkins/Vault interaction
+    "auth-service:4000:4000"
+    "patient-service:4100:4100"
+    "scans-service:4200:4200"
+    "appointment-service:4300:4300"
+    "billing-service:4400:4400"
+    "prescription-service:4500:4500"
+    #"vault-service:8200:8200"    # Crucial for Jenkins/Vault interaction
     "mongo:27017:27017"          # Access the database locally
 )
 

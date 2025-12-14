@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const ScanMeta = require('../models/ScanMeta');
+const axios = require('axios');
 
 // POST /api/scans
 // multipart/form-data: file, patientId, type, description
@@ -37,6 +38,22 @@ exports.uploadScan = async (req, res) => {
 exports.getScansByPatient = async (req, res) => {
   try {
     const { patientId } = req.params;
+    const { user } = req;
+
+    if (user.role === 'patient') {
+      // Patient can only see their own scans
+      const response = await axios.get(`http://patient-service:5002/api/patients/user/${user.id}`, {
+        headers: {
+          'Authorization': req.headers.authorization
+        }
+      });
+      const patient = response.data;
+
+      if (patient._id.toString() !== patientId) {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+    }
+
     const scans = await ScanMeta.find({ patientId }).sort({ createdAt: -1 });
     res.json(scans);
   } catch (err) {

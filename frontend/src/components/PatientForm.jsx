@@ -4,6 +4,8 @@ export default function PatientForm({ initial = {}, onSubmit, submitLabel = 'Sav
   const [form, setForm] = useState({
     firstName: initial.firstName || '',
     lastName: initial.lastName || '',
+    username: initial.username || '',
+    password: initial.password || '',
     dob: initial.dob ? initial.dob.slice(0,10) : '',
     gender: initial.gender || 'male',
     phone: initial?.contact?.phone || '',
@@ -18,6 +20,8 @@ export default function PatientForm({ initial = {}, onSubmit, submitLabel = 'Sav
     const payload = {
       firstName: form.firstName,
       lastName: form.lastName,
+      username: form.username,
+      password: form.password,
       dob: form.dob ? new Date(form.dob).toISOString() : undefined,
       gender: form.gender,
       contact: { phone: form.phone, email: form.email, address: form.address }
@@ -29,7 +33,11 @@ export default function PatientForm({ initial = {}, onSubmit, submitLabel = 'Sav
     <form onSubmit={submit} style={{ display: 'grid', gap: 8, maxWidth: 480 }}>
       <div style={{ display: 'flex', gap: 8 }}>
         <input name="firstName" value={form.firstName} onChange={handleChange} placeholder="First name" required />
-        <input name="lastName" value={form.lastName} onChange={handleChange} placeholder="Last name" />
+        <input name.="lastName" value={form.lastName} onChange={handleChange} placeholder="Last name" />
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input name="username" value={form.username} onChange={handleChange} placeholder="Username" required />
+        <input name="password" type="password" value={form.password} onChange={handleChange} placeholder="Password" required />
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         <input name="dob" type="date" value={form.dob} onChange={handleChange} />

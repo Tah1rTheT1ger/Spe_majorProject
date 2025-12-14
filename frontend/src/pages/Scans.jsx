@@ -48,9 +48,10 @@ export default function Scans() {
         const setSelfPatientId = async () => {
             if (user?.role === 'patient' && !paramPatientId) {
                 try {
-                    const patRes = await api.get('http://localhost:4100/api/patients/search?q=');
-                    const found = patRes.data.find(p => p.contact?.email === user.email);
-                    if (found) setSelectedPatientId(found._id);
+                    const patRes = await api.get(`http://localhost:4100/api/patients/user/${user.id}`);
+                    if (patRes.data) {
+                        setSelectedPatientId(patRes.data._id);
+                    }
                 } catch (err) {
                     console.error(err);
                 }
