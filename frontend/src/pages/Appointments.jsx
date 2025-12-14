@@ -3,7 +3,7 @@ import api from '../api/apiClient';
 import { AuthContext } from '../contexts/AuthContext';
 
 export default function Appointments() {
-  const { token } = useContext(AuthContext);
+  const { token, user } = useContext(AuthContext);
   const [list, setList] = useState([]);
   const [patients, setPatients] = useState([]);
   const [doctors, setDoctors] = useState([]);
@@ -135,76 +135,78 @@ export default function Appointments() {
     <div style={pageStyle}>
       <h2 style={{ fontSize: '2rem', marginBottom: '1.5rem', color: '#2c3e50' }}>Appointments</h2>
 
-      <form onSubmit={submit} style={formStyle}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Patient</label>
-            <select
-              value={form.patientId}
-              onChange={e => setForm({ ...form, patientId: e.target.value })}
-              required
-              style={inputStyle}
-            >
-              <option value="">Select Patient</option>
-              {patients.map(p => (
-                <option key={p._id} value={p._id}>{p.name} ({p.contact?.email})</option>
-              ))}
-            </select>
+      {user?.role !== 'patient' && (
+        <form onSubmit={submit} style={formStyle}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Patient</label>
+              <select
+                value={form.patientId}
+                onChange={e => setForm({ ...form, patientId: e.target.value })}
+                required
+                style={inputStyle}
+              >
+                <option value="">Select Patient</option>
+                {patients.map(p => (
+                  <option key={p._id} value={p._id}>{p.name} ({p.contact?.email})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Doctor</label>
+              <select
+                value={form.doctorId}
+                onChange={e => setForm({ ...form, doctorId: e.target.value })}
+                required
+                style={inputStyle}
+              >
+                <option value="">Select Doctor</option>
+                {doctors.map(d => (
+                  <option key={d._id} value={d._id}>{d.name} ({d.specialization})</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Doctor</label>
-            <select
-              value={form.doctorId}
-              onChange={e => setForm({ ...form, doctorId: e.target.value })}
-              required
-              style={inputStyle}
-            >
-              <option value="">Select Doctor</option>
-              {doctors.map(d => (
-                <option key={d._id} value={d._id}>{d.name} ({d.specialization})</option>
-              ))}
-            </select>
-          </div>
-        </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Date & Time</label>
+              <input
+                type="datetime-local"
+                value={form.scheduledAt}
+                onChange={e => setForm({ ...form, scheduledAt: e.target.value })}
+                required
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Duration (Min)</label>
+              <input
+                type="number"
+                placeholder="30"
+                value={form.durationMinutes}
+                onChange={e => setForm({ ...form, durationMinutes: Number(e.target.value) })}
+                style={inputStyle}
+              />
+            </div>
+          </div>
+
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Date & Time</label>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Reason</label>
             <input
-              type="datetime-local"
-              value={form.scheduledAt}
-              onChange={e => setForm({ ...form, scheduledAt: e.target.value })}
-              required
+              placeholder="Checkup, Follow-up, etc."
+              value={form.reason}
+              onChange={e => setForm({ ...form, reason: e.target.value })}
               style={inputStyle}
             />
           </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Duration (Min)</label>
-            <input
-              type="number"
-              placeholder="30"
-              value={form.durationMinutes}
-              onChange={e => setForm({ ...form, durationMinutes: Number(e.target.value) })}
-              style={inputStyle}
-            />
+
+          <div style={{ marginTop: '8px' }}>
+            <button type="submit" style={btnStyle}>Create Appointment</button>
+            {message && <span style={{ marginLeft: '16px', color: message.includes('failed') ? 'red' : 'green' }}>{message}</span>}
           </div>
-        </div>
-
-        <div>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Reason</label>
-          <input
-            placeholder="Checkup, Follow-up, etc."
-            value={form.reason}
-            onChange={e => setForm({ ...form, reason: e.target.value })}
-            style={inputStyle}
-          />
-        </div>
-
-        <div style={{ marginTop: '8px' }}>
-          <button type="submit" style={btnStyle}>Create Appointment</button>
-          {message && <span style={{ marginLeft: '16px', color: message.includes('failed') ? 'red' : 'green' }}>{message}</span>}
-        </div>
-      </form>
+        </form>
+      )}
 
       <div>
         <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#34495e' }}>Upcoming Schedule</h3>

@@ -40,6 +40,11 @@ exports.createAppointment = async (req, res) => {
   try {
     const { patientId, doctorId, scheduledAt, durationMinutes = 30, reason } = req.body;
 
+    // RBAC: Patients cannot create appointments
+    if (req.user.role === 'patient') {
+      return res.status(403).json({ message: 'Patients cannot create appointments' });
+    }
+
     if (!patientId || !doctorId || !scheduledAt) {
       return res.status(400).json({ message: 'patientId, doctorId and scheduledAt are required' });
     }
@@ -68,6 +73,10 @@ exports.createAppointment = async (req, res) => {
 exports.listAppointments = async (req, res) => {
   try {
     const q = {};
+    // RBAC: Patients can only see their own appointments
+    if (req.user.role === 'patient') {
+      q.patientId = new mongoose.Types.ObjectId(req.user.id);
+    }
     if (req.query.doctorId && mongoose.Types.ObjectId.isValid(req.query.doctorId)) q.doctorId = new mongoose.Types.ObjectId(req.query.doctorId);
     if (req.query.patientId && mongoose.Types.ObjectId.isValid(req.query.patientId)) q.patientId = new mongoose.Types.ObjectId(req.query.patientId);
     if (req.query.date) {
@@ -103,7 +112,7 @@ exports.updateAppointment = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: 'Invalid id' });
 
     const update = req.body;
-    if ((update.scheduledAt || update.durationMinutes) ) {
+    if ((update.scheduledAt || update.durationMinutes)) {
       const appt = await Appointment.findById(id);
       if (!appt) return res.status(404).json({ message: 'Not found' });
       const start = update.scheduledAt ? new Date(update.scheduledAt) : appt.scheduledAt;
