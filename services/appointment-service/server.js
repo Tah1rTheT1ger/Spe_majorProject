@@ -10,6 +10,12 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
+// Simple Request Logger for ELK Visualization
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 app.use('/api/appointments', appointmentRoutes);
 
 const PORT = process.env.PORT || 4300;

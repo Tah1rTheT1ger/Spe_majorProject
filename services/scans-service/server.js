@@ -15,6 +15,12 @@ initStorage();
 app.use(cors());
 app.use(bodyParser.json());
 
+// Simple Request Logger for ELK Visualization
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 // If you want to serve raw files under /uploads directly (optional)
 // const path = require('path');
 // app.use('/static/scans', express.static(path.resolve(process.env.FILE_UPLOAD_DIR || './uploads/scans')));
