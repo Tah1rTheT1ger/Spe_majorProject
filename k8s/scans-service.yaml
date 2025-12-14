@@ -29,6 +29,11 @@ spec:
           value: "mongodb://mongo:27017/medical_scans"
         - name: PORT
           value: "4200"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: auth-service-secret
+              key: jwt-secret
         volumeMounts:
         - name: scan-uploads
           mountPath: /app/uploads/scans
