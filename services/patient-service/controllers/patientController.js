@@ -7,7 +7,7 @@ exports.createPatient = async (req, res) => {
     const { firstName, lastName, username, password, dob, gender, contact, insurance } = req.body;
 
     // Create user in auth-service
-    const authResponse = await axios.post('http://auth-service:5001/api/auth/register', {
+    const authResponse = await axios.post('http://auth-service:4000/api/auth/register', {
       username,
       password,
       role: 'patient'

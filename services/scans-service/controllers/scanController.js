@@ -42,7 +42,7 @@ exports.getScansByPatient = async (req, res) => {
 
     if (user.role === 'patient') {
       // Patient can only see their own scans
-      const response = await axios.get(`http://patient-service:5002/api/patients/user/${user.id}`, {
+      const response = await axios.get(`http://patient-service:4100/api/patients/user/${user.id}`, {
         headers: {
           'Authorization': req.headers.authorization
         }
