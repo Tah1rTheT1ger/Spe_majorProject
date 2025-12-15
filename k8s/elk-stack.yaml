@@ -18,12 +18,14 @@ spec:
         image: docker.elastic.co/elasticsearch/elasticsearch:7.17.18
         resources:
             limits:
-              memory: 1Gi
+              memory: 2Gi
             requests:
-              memory: 500Mi
+              memory: 1Gi
         env:
         - name: discovery.type
           value: single-node
+        - name: ES_JAVA_OPTS
+          value: "-Xms1g -Xmx1g"
         ports:
         - containerPort: 9200
           name: tcp
@@ -124,7 +126,7 @@ spec:
           path: /var/log
       - name: data
         hostPath:
-          path: /var/lib/filebeat-data
+          path: /var/lib/filebeat-data-v3
           type: DirectoryOrCreate
 ---
 apiVersion: rbac.authorization.k8s.io/v1
