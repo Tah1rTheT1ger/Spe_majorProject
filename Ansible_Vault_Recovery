@@ -1,0 +1,38 @@
+VAULT_POD=$(kubectl get pods -l app=vault -o jsonpath='{.items[0].metadata.name}')
+
+echo "1. WRITING DOCKER CREDENTIALS..."
+kubectl exec -it $VAULT_POD -- sh -c "export VAULT_ADDR='http://127.0.0.1:8200'; export VAULT_TOKEN='root-token'; \
+vault kv put secret/jenkins/docker username=YOUR_DOCKER_USERNAME password=YOUR_DOCKER_PASSWORD"
+
+===
+
+VAULT_POD=$(kubectl get pods -l app=vault -o jsonpath='{.items[0].metadata.name}')
+
+echo "2. GENERATING NEW SECRET ID (for Jenkins Credential)..."
+kubectl exec -it $VAULT_POD -- sh -c "export VAULT_ADDR='http://127.0.0.1:8200'; export VAULT_TOKEN='root-token'; vault write -f auth/approle/role/jenkins-ci-role/secret-id"
+
+===
+
+# Then put the secret ID into Jenkins Credentials
+
+===
+
+# Re-ENABLING Approle Backend:
+
+VAULT_POD=$(kubectl get pods -l app=vault -o jsonpath='{.items[0].metadata.name}')
+
+echo "--- 1. RE-ENABLING AppRole AUTH BACKEND ---"
+kubectl exec -it $VAULT_POD -- sh -c "export VAULT_ADDR='http://127.0.0.1:8200'; export VAULT_TOKEN='root-token'; vault auth enable approle"
+
+===
+
+# Recreate the Approle (To be Certain)
+
+echo "--- 2. RE-CREATING AppRole AND BINDING POLICIES ---"
+kubectl exec -it $VAULT_POD -- sh -c "export VAULT_ADDR='http://127.0.0.1:8200'; export VAULT_TOKEN='root-token'; \
+vault write auth/approle/role/jenkins-ci-role \
+    role_id=\"dcc579e4-a0f2-4de1-3aef-0a453b320860\" \
+    secret_id_ttl=10m \
+    token_ttl=1h \
+    token_max_ttl=4h \
+    token_policies=\"default,jenkins-read-docker\""
