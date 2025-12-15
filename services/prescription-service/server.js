@@ -11,7 +11,10 @@ app.use(bodyParser.json());
 
 // Simple Request Logger for ELK Visualization
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  const start = Date.now();
+  res.on('finish', () => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} ${res.statusCode} ${Date.now() - start}ms`);
+  });
   next();
 });
 
