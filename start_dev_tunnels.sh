@@ -11,7 +11,7 @@ SERVICE_MAP=(
     "billing-service:4400:4400"
     "prescription-service:4500:4500"
     #"vault-service:8200:8200"    # Crucial for Jenkins/Vault interaction
-    "mongo:27017:27017"          # Access the database locally
+    "mongo:27017:27019"          # Access the database locally
     "kibana:5601:5601"           # Access Kibana Dashboard
 )
 

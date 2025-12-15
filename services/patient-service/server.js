@@ -9,7 +9,7 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// Simple Request Logger for ELK Visualization
+// Simple Request Logger for ELK Visualization.
 app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
